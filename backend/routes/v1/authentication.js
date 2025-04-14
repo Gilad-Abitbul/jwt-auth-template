@@ -75,7 +75,7 @@ router.post(
     // Email validations
     body('email')
       .isEmail().withMessage('Please enter a valid email address.'),
-      
+
     // Password validations
     body('password')
       .trim()
