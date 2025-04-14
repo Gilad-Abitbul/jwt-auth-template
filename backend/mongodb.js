@@ -1,4 +1,6 @@
+// Loads environment variables from the .env file (***only in development environment***)
 require('dotenv').config()
+
 const mongoose = require('mongoose');
 const MONGODB_URI = process.env.MONGODB_URI;
 
