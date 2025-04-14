@@ -14,7 +14,6 @@
  * - createdAt (Date, auto-generated): Timestamp of when the user was created. Defaults to current date/time.
  *
  * Notes:
- * - The "password" field has `select: false` to ensure it is not returned in queries by default.
  * - The schema is used to create the "User" model for interacting with the users collection.
  */
 
@@ -38,7 +37,6 @@ const userSchema = new Schema({
   password: {
     type: String,
     required: true,
-    select: false,
   },
   status: {
     type: String,

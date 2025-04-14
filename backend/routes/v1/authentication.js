@@ -69,4 +69,24 @@ router.post(
   authenticationController.createUser
 );
 
+router.post(
+  '/login',
+  [
+    // Email validations
+    body('email')
+      .isEmail().withMessage('Please enter a valid email address.'),
+      
+    // Password validations
+    body('password')
+      .trim()
+      .isLength({ min: 5, max: 12 }).withMessage('Password must be between 5 and 12 characters long.')
+      .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter.')
+      .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter.')
+      .matches(/[0-9]/).withMessage('Password must contain at least one number.')
+      .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character (e.g. @, #, $).')
+      .not().matches(/\s/).withMessage('Password must not contain spaces.'),
+  ],
+  authenticationController.loginUser
+)
+
 module.exports = router;
