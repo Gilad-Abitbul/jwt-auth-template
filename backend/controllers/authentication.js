@@ -6,6 +6,7 @@ const PasswordReset = require('../models/password-reset.js');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const { sendEmail } = require('../utils/mailer.js');
 
 /**
  * @function createUser
@@ -183,23 +184,54 @@ exports.loginUser = async (request, response, next) => {
   }
 }
 
-exports.requestPasswordReset = async (request, response, next) => {
-  const { email } = request.body;
-  const user = await User.findOne({email: email});
-  if (!user) {
-    return response.status(200).json({
-      message: 'If the email exists, a reset code was sent.'
-    });
+function maskEmail(email) {
+  const [local, domain] = email.split('@');
+  if (local.length <= 3) {
+    return local[0] + '***@' + domain;
   }
+  return local.substring(0, 3) + '***@' + domain;
+}
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10);
-  const hashedOtp = await bcrypt.hash(otp, saltRounds);
+exports.requestPasswordReset = async (request, response, next) => {
+  try {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+      const error = new Error(errors.array()[0].msg || 'Email Validation failed');
+      error.statusCode = 422;
+      throw error;
+    }
+    const { email } = request.body;
+    const maskedEmail = maskEmail(email);
+    const user = await User.findOne({email: email});
+    if (!user) {
+      return response.status(200).json({
+        message: `If the email ${maskedEmail} exists, a reset code was sent.`
+      });
+    }
 
-  await PasswordReset.create({
-    user: user._id,
-    hashedOtp,
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000)
-  });
+    await PasswordReset.deleteMany({
+      user: user._id,
+      used: false,
+    });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10);
+    const hashedOtp = await bcrypt.hash(otp, saltRounds);
+
+    await PasswordReset.create({
+      user: user._id,
+      hashedOtp,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
+    });
+    
+    await sendEmail(otp, user.firstName + ' ' + user.lastName, {
+      to: email,
+    })
+    return response.status(200).json({
+      message: `If the email ${maskedEmail} exists, a reset code was sent.`
+    });
+  } catch(err) {
+    next(err)
+  }
 
 }

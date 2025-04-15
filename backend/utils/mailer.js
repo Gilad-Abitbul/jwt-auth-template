@@ -85,10 +85,11 @@ const buildResetPasswordEmailHTML = (username, otp) => {
   `;
 }
 
-const sendEmail = (options) => {
+const sendEmail = async (otp, username, options) => {
   transporter.sendMail({
     from: `My Node.js App <${process.env.MAIL_USER}>`,
-    html: buildResetPasswordEmailHTML('Gilad Abitbul', 123456),
+    html: buildResetPasswordEmailHTML(username, otp),
+    subject: "Reset Password - My Node.js App",
     ...options
   });
 };

@@ -4,7 +4,8 @@ const router = express.Router();
 
 const authenticationController = require('../../controllers/authentication.js');
 const User = require('../../models/user.js');
-
+const {passwordResetRateLimit} = require('../../middleware/rateLimiters.js');
+const validateRequest  = require('../../middleware/validate-request.js');
 /**
  * @route   POST /api/v1/signup
  * @desc    Register a new user account
@@ -91,13 +92,15 @@ router.post(
 )
 
 router.post(
-  'request-password-reset',
+  '/request-password-reset',
   [
     body('email')
       .isEmail().withMessage('Invalid email address.')
       .normalizeEmail()
   ],
-  // authenticationController.requestPasswordReset
+  validateRequest,
+  passwordResetRateLimit,
+  authenticationController.requestPasswordReset
 )
 
 module.exports = router;
