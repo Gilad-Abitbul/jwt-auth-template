@@ -36,6 +36,7 @@ router.post(
     // Email validations
     body('email')
       .isEmail().withMessage('Please enter a valid email address.')
+      .normalizeEmail()
       .custom((value) => {
         return User.findOne({ email: value }).then(userDoc => {
           if (userDoc) {
@@ -74,7 +75,7 @@ router.post(
   [
     // Email validations
     body('email')
-      .isEmail().withMessage('Please enter a valid email address.'),
+      .isEmail().withMessage('Please enter a valid email address.').normalizeEmail(),
 
     // Password validations
     body('password')
@@ -87,6 +88,16 @@ router.post(
       .not().matches(/\s/).withMessage('Password must not contain spaces.'),
   ],
   authenticationController.loginUser
+)
+
+router.post(
+  'request-password-reset',
+  [
+    body('email')
+      .isEmail().withMessage('Invalid email address.')
+      .normalizeEmail()
+  ],
+  // authenticationController.requestPasswordReset
 )
 
 module.exports = router;

@@ -64,15 +64,14 @@ module.exports = (request, response, next) => {
   try {
     // Verify the token using the secret key from environment variables
     decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (error) {
-    console.log("Token verification failed");
+  } catch (e) {
+    const error = new Error("Token verification failed");
     error.statusCode = 500;
     throw error;
   }
 
   // If the token is invalid (decoded is null or undefined)
   if (!decoded) {
-    console.log("Not authenticated - Token is invalid");
     const error = new Error('Not authenticated');
     error.statusCode = 401;
     throw error;
