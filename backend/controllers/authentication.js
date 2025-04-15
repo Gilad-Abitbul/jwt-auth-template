@@ -2,6 +2,7 @@
 require('dotenv').config()
 
 const User = require('../models/user.js');
+const PasswordReset = require('../models/password-reset.js');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
@@ -180,4 +181,25 @@ exports.loginUser = async (request, response, next) => {
     }
     next(error);
   }
+}
+
+exports.requestPasswordReset = async (request, response, next) => {
+  const { email } = request.body;
+  const user = await User.findOne({email: email});
+  if (!user) {
+    return response.status(200).json({
+      message: 'If the email exists, a reset code was sent.'
+    });
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10);
+  const hashedOtp = await bcrypt.hash(otp, saltRounds);
+
+  await PasswordReset.create({
+    user: user._id,
+    hashedOtp,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+  });
+
 }
