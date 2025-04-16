@@ -4,7 +4,7 @@ const router = express.Router();
 
 const authenticationController = require('../../controllers/authentication.js');
 const User = require('../../models/user.js');
-const {passwordResetRateLimit} = require('../../middleware/rateLimiters.js');
+const {passwordResetRateLimit, otpVerifyRateLimit} = require('../../middleware/rateLimiters.js');
 const validateRequest  = require('../../middleware/validate-request.js');
 /**
  * @route   POST /api/v1/signup
@@ -101,6 +101,20 @@ router.post(
   validateRequest,
   passwordResetRateLimit,
   authenticationController.requestPasswordReset
+)
+
+router.post(
+  '/verify-reset-otp',
+  [
+    body('otp')
+    .isLength({ min: 6, max: 6 }).withMessage('Incorrect OTP format').isNumeric().withMessage('Incorrect OTP format'),
+    body('email')
+    .isEmail().withMessage('Invalid email address.')
+    .normalizeEmail()
+  ],
+  validateRequest,
+  otpVerifyRateLimit,
+  authenticationController.verifyResetOtp
 )
 
 module.exports = router;

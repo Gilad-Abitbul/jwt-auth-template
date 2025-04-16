@@ -47,3 +47,28 @@ exports.passwordResetRateLimit = (request, response, next) => {
     });
   });
 };
+
+
+
+const otpVerifyLimiterEmail = new RateLimiterRedis({
+  storeClient: redisClient,
+  keyPrefix: 'otp_verify_email',
+  points: 5,
+  duration: 60 * 5,
+});
+
+const otpVerifyLimiterIP = new RateLimiterRedis({
+  storeClient: redisClient,
+  keyPrefix: 'otp_verify_ip',
+  points: 10,
+  duration: 60 * 10,
+});
+
+exports.otpVerifyRateLimit = (request, response, next) => {
+  const { email } = request.body;
+  const ip = request.ip;
+
+  handleRateLimiter(otpVerifyLimiterEmail, email, response, () => {
+    handleRateLimiter(otpVerifyLimiterIP, ip, response, next);
+  });
+};

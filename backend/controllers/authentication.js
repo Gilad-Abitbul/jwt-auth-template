@@ -2,11 +2,17 @@
 require('dotenv').config()
 
 const User = require('../models/user.js');
-const PasswordReset = require('../models/password-reset.js');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../utils/mailer.js');
+const {v4: uuidv4} = require('uuid');
+
+//OTP management using mongodb:
+//const PasswordReset = require('../models/password-reset.js');
+
+//OTP management using redis:
+const redisClient = require('../utils/redisClient.js');
 
 /**
  * @function createUser
@@ -209,29 +215,68 @@ exports.requestPasswordReset = async (request, response, next) => {
       });
     }
 
-    await PasswordReset.deleteMany({
-      user: user._id,
-      used: false,
-    });
+    //OTP management using mongodb:
+    // await PasswordReset.deleteMany({
+    //   user: user._id,
+    //   used: false,
+    // });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10);
     const hashedOtp = await bcrypt.hash(otp, saltRounds);
-
-    await PasswordReset.create({
-      user: user._id,
-      hashedOtp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
-    });
+  
+    //OTP management using mongodb:
+    // await PasswordReset.create({
+    //   user: user._id,
+    //   hashedOtp,
+    //   expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
+    // });
     
+    //OTP management using redis:
+    await redisClient.deleteKey(`password_reset:${email}`);
+    await redisClient.set(`password_reset:${email}`, hashedOtp, 'EX', 300);
+
     await sendEmail(otp, user.firstName + ' ' + user.lastName, {
       to: email,
     })
+
     return response.status(200).json({
       message: `If the email ${maskedEmail} exists, a reset code was sent.`
     });
   } catch(err) {
     next(err)
   }
+}
 
+exports.verifyResetOtp = async (request, response, next) => {
+  try {
+    const {email, otp} = request.body;
+    const redisOtpKey = `password_reset:${email}`;
+    const hashedOtp = await redisClient.get(redisOtpKey);
+    if (!hashedOtp) {
+      return response.status(400).json({
+        message: 'Invalid OTP or expired',
+      });
+    }
+
+    const isMatch = await bcrypt.compare(otp, hashedOtp);
+    if (!isMatch) {
+      return response.status(401).json({
+        message: 'Invalid OTP',
+      });
+    }
+
+    await redisClient.del(redisOtpKey);
+
+    const resetToken = uuidv4();
+    const redisKey = `reset_token:${resetToken}`;
+    await redisClient.set(redisKey, email, 'EX', 300);
+
+    return response.status(200).json({
+      message: 'OTP verified successfully.',
+      resetToken,
+    });
+  } catch (error) {
+    next(error);
+  }
 }
