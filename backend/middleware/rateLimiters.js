@@ -1,6 +1,7 @@
 const { RateLimiterRedis } = require('rate-limiter-flexible');
 
 const redisClient = require('../utils/redisClient.js');
+const logger = require('../utils/logger.js');
 
 const limiterPer30s = new RateLimiterRedis({
   storeClient: redisClient,
@@ -30,6 +31,7 @@ const handleRateLimiter = (limiter, key, response, next) => {
     .catch((rlRejected) => {
       const retrySecs = Math.round(rlRejected.msBeforeNext / 1000) || 1;
       response.set('Retry-After', retrySecs);
+      logger.warn(`Rate limit hit: key=${key}, retry after=${retrySecs}s`);
       return response.status(429).json({
         message: 'Too many requests. Please try again later.',
         retryAfterSeconds: retrySecs

@@ -20,7 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.10.1",
     "rate-limiter-flexible": "^7.0.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "mongoose": "^8.13.2",
