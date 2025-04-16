@@ -231,4 +231,10 @@ router.post(
   resetPasswordRateLimit,
   authenticationController.resetPassword
 )
+
+router.get(
+  '/verify-email',
+  authenticationController.verifyEmail
+)
+
 module.exports = router;

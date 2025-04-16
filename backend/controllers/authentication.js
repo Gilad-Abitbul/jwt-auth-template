@@ -5,7 +5,7 @@ const User = require('../models/user.js');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
-const { sendEmail } = require('../utils/mailer.js');
+const { EmailBuilder, EmailFactory } = require('../utils/mailer/mailer.js');
 const {v4: uuidv4} = require('uuid');
 const logger = require('../utils/logger.js');
 
@@ -96,10 +96,26 @@ exports.createUser = async (request, response, next) => {
 
     const savedUser = await user.save();
 
+    const token = jwt.sign(
+      { userId: savedUser._id }, 
+      process.env.JWT_SECRET,
+      { expiresIn: '1d'}
+    )
+
+    const username = `${firstName} ${lastName}`;
+    const verificationLink = `http://localhost:8080/api/v1/verify-email?token=${token}`;
+
+    const template = EmailFactory.create('confirm-email', {
+      username,
+      verificationLink,
+    })
+
+    await new EmailBuilder(template).setTo(email).send();
+
     response.status(201).json({ message: 'User created successfully!', userId: savedUser._id.toString() });
 
   } catch (error) {
-    if (!error.statusCode) {
+    if (!error.statusCode && !error.message) {
       error.message = 'Error creating user!';
       error.statusCode = 500;
     }
@@ -236,10 +252,22 @@ exports.requestPasswordReset = async (request, response, next) => {
     //OTP management using redis:
     await redisClient.deleteKey(`password_reset:${email}`);
     await redisClient.set(`password_reset:${email}`, hashedOtp, 'EX', 300);
+    const username = `${user.firstName} ${user.lastName}`
 
-    await sendEmail(otp, user.firstName + ' ' + user.lastName, {
-      to: email,
-    })
+    const template = EmailFactory.create('reset-password', {
+      username,
+      otp
+    });
+
+    await new EmailBuilder(template).setTo(email).send()
+    
+
+    // await sendEmail({
+    //   type: 'reset-password',
+    //   to: email,
+    //   username,
+    //   otp
+    // })
 
     return response.status(200).json({
       message: `If the email ${maskedEmail} exists, a reset code was sent.`
@@ -319,3 +347,34 @@ exports.resetPassword = async (request, response, next) => {
     next(error);
   }
 }
+
+exports.verifyEmail = async (request, response, next) => {
+  const { token } = request.query;
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return response.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    if (user.verified) {
+      return response.status(200).json({
+        message: 'Email already verified.',
+      });
+    }
+    user.verified = true;
+    await user.save();
+    logger.info(`Email verified for ${user.email}`);
+    return response.status(200).json({
+      message: 'Email verified successfully.',
+    });
+    } catch (error) {
+      response.status(400).json({
+        message: 'Invalid token',
+      })
+    }
+  }

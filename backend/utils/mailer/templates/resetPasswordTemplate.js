@@ -1,17 +1,10 @@
-// Loads environment variables from the .env file (***only in development environment***)
-require('dotenv').config()
-
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  service: process.env.NODEMAILER_SERVICE,
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
-  }
-});
-
-const buildResetPasswordEmailHTML = (username, otp) => {
+/**
+ * Generates HTML for the "Reset Password" email template
+ * @param {string} username - The recipient's username
+ * @param {string} otp - One-time password for password reset
+ * @returns {string} HTML content
+ */
+const generateResetPasswordHtml = (username, otp) => {
   const formattedOtp = otp.toString().split('').join(' ');
   return `
     <!DOCTYPE html>
@@ -85,15 +78,4 @@ const buildResetPasswordEmailHTML = (username, otp) => {
   `;
 }
 
-const sendEmail = async (otp, username, options) => {
-  transporter.sendMail({
-    from: `My Node.js App <${process.env.MAIL_USER}>`,
-    html: buildResetPasswordEmailHTML(username, otp),
-    subject: "Reset Password - My Node.js App",
-    ...options
-  });
-};
-
-module.exports = {
-  sendEmail
-}
+module.exports = generateResetPasswordHtml;
