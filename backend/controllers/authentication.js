@@ -7,6 +7,7 @@ const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../utils/mailer.js');
 const {v4: uuidv4} = require('uuid');
+const logger = require('../utils/logger.js');
 
 //OTP management using mongodb:
 //const PasswordReset = require('../models/password-reset.js');
@@ -270,13 +271,51 @@ exports.verifyResetOtp = async (request, response, next) => {
 
     const resetToken = uuidv4();
     const redisKey = `reset_token:${resetToken}`;
-    await redisClient.set(redisKey, email, 'EX', 300);
+    await redisClient.set(redisKey, email, 'EX', 600);
 
     return response.status(200).json({
       message: 'OTP verified successfully.',
       resetToken,
     });
   } catch (error) {
+    next(error);
+  }
+}
+
+exports.resetPassword = async (request, response, next) => {
+  try {
+    const {resetToken, newPassword} = request.body;
+    const redisKey = `reset_token:${resetToken}`;
+    console.log(redisKey);
+    await redisClient.showAllKeysAndValues();
+    const email = await redisClient.get(redisKey);
+    console.log(email);
+    if (!email) {
+      return response.status(400).json({
+        message: 'Invalid or expired reset token.',
+      });
+    }
+
+    const user = await User.findOne({email: email});
+    if (!user) {
+      return response.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    user.password = hashedPassword;
+    await user.save();
+    await redisClient.del(redisKey);
+    logger.info(`Password reset for ${email}`);
+    return response.status(200).json({
+      message: 'Password reset successfully.',
+    });
+
+  } catch (error) {
+    logger.error('Error in resetPassword controller', error);
     next(error);
   }
 }

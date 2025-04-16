@@ -4,7 +4,7 @@ const router = express.Router();
 
 const authenticationController = require('../../controllers/authentication.js');
 const User = require('../../models/user.js');
-const {passwordResetRateLimit, otpVerifyRateLimit} = require('../../middleware/rateLimiters.js');
+const {requestPasswordResetRateLimit, otpVerifyRateLimit, resetPasswordRateLimit} = require('../../middleware/rateLimiters.js');
 const validateRequest  = require('../../middleware/validate-request.js');
 /**
  * @route   POST /api/v1/signup
@@ -71,6 +71,29 @@ router.post(
   authenticationController.createUser
 );
 
+/**
+ * @route   POST /api/v1/login
+ * @desc    Login a user with email and password
+ * @access  Public
+ * 
+ * @requestBody
+ * {
+ *   "email": "string",     // A valid registered email address
+ *   "password": "string"   // 5-12 characters, includes uppercase, lowercase, digit, symbol, no spaces
+ * }
+ * 
+ * @response
+ * 200 OK (success)
+ * {
+ *   "message": "Login successful",
+ *   "token": "JWT",
+ *   "userId": "<MongoDB User ID>",
+ * }
+ * 
+ * @validation
+ * - email must be a valid format
+ * - password must be 5–12 characters, with required complexity
+ */
 router.post(
   '/login',
   [
@@ -91,23 +114,70 @@ router.post(
   authenticationController.loginUser
 )
 
+/**
+ * @route   POST /api/v1/request-password-reset
+ * @desc    Request a password reset OTP to be sent to user's email
+ * @access  Public
+ * 
+ * @requestBody
+ * {
+ *   "email": "string"   // A valid registered email address
+ * }
+ * 
+ * @response
+ * 200 OK (success)
+ * {
+ *   "message": "If the email <masked email format (e.g. test@test.com -> t***@test.com)> exists, a reset code was sent.""
+ * }
+ * 
+ * @validation
+ * - email must be valid format
+ * - Rate limiting applies per email and IP
+ */
 router.post(
   '/request-password-reset',
   [
+    // Email validations
     body('email')
       .isEmail().withMessage('Invalid email address.')
       .normalizeEmail()
   ],
   validateRequest,
-  passwordResetRateLimit,
+  requestPasswordResetRateLimit,
   authenticationController.requestPasswordReset
 )
 
+/**
+ * @route   POST /api/v1/verify-reset-otp
+ * @desc    Verify the OTP sent to the user's email
+ * @access  Public
+ * 
+ * @requestBody
+ * {
+ *   "email": "string",   // A valid registered email
+ *   "otp": "string"      // 6-digit numeric OTP
+ * }
+ * 
+ * @response
+ * 200 OK (success)
+ * {
+ *   "message": "OTP verified successfully",
+ *   "resetToken": "<UUIDv4 token>"
+ * }
+ * 
+ * @validation
+ * - email must be valid
+ * - otp must be a 6-digit numeric string
+ * - Rate limiting applies per email and IP
+ */
 router.post(
   '/verify-reset-otp',
   [
+    // OTP validations
     body('otp')
     .isLength({ min: 6, max: 6 }).withMessage('Incorrect OTP format').isNumeric().withMessage('Incorrect OTP format'),
+    
+    // Email validations
     body('email')
     .isEmail().withMessage('Invalid email address.')
     .normalizeEmail()
@@ -117,4 +187,48 @@ router.post(
   authenticationController.verifyResetOtp
 )
 
+/**
+ * @route   POST /api/v1/reset-password
+ * @desc    Reset user's password using a valid reset token
+ * @access  Public
+ * 
+ * @requestBody
+ * {
+ *   "newPassword": "string",   // 5-12 characters, includes uppercase, lowercase, digit, symbol, no spaces
+ *   "resetToken": "UUIDv4"     // A valid reset token received from OTP verification
+ * }
+ * 
+ * @response
+ * 200 OK (success)
+ * {
+ *   "message": "Password reset successfully."
+ * }
+ * 
+ * @validation
+ * - password must meet complexity rules
+ * - resetToken must be a valid UUIDv4
+ * - Rate limiting applies per IP
+ */
+router.post(
+  '/reset-password',
+  [
+    // New Password validations
+    body('newPassword')
+    .trim()
+    .isLength({ min: 5, max: 12 }).withMessage('Password must be between 5 and 12 characters long.')
+    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter.')
+    .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter.')
+    .matches(/[0-9]/).withMessage('Password must contain at least one number.')
+    .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character (e.g. @, #, $).')
+    .not().matches(/\s/).withMessage('Password must not contain spaces.'),
+    
+    // Reset Token validations
+    body('resetToken')
+    .trim()
+    .isUUID(4).withMessage('Invalid reset token.')
+  ],
+  validateRequest,
+  resetPasswordRateLimit,
+  authenticationController.resetPassword
+)
 module.exports = router;

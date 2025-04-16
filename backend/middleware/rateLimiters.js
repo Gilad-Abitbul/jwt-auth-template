@@ -1,3 +1,26 @@
+/**
+ * @file rateLimiters.js
+ * @desc    Defines rate limiting middleware for sensitive authentication actions
+ * @uses    rate-limiter-flexible with Redis to control request frequency
+ * 
+ * @rateLimiters
+ * - requestPasswordResetRateLimit: Limits requests for sending reset password OTPs
+ *    - max 1 request per 30 seconds (per email)
+ *    - max 3 requests per 24 hours (per email)
+ *    - max 5 requests per 24 hours (per IP)
+ * 
+ * - otpVerifyRateLimit: Limits OTP verification attempts
+ *    - max 5 attempts per 5 minutes (per email)
+ *    - max 10 attempts per 10 minutes (per IP)
+ * 
+ * - resetPasswordRateLimit: Limits password reset actions
+ *    - max 1 reset per 10 minutes (per IP)
+ * 
+ * @exports
+ * - requestPasswordResetRateLimit: Express middleware
+ * - otpVerifyRateLimit: Express middleware
+ * - resetPasswordRateLimit: Express middleware
+ */
 const { RateLimiterRedis } = require('rate-limiter-flexible');
 
 const redisClient = require('../utils/redisClient.js');
@@ -24,7 +47,15 @@ const limiterPerDayPerIP = new RateLimiterRedis({
   duration: 60 * 60 * 24,
 });
 
-
+/**
+ * Generic function to handle rate limiting logic using a given limiter instance.
+ * If limit exceeded, responds with 429 and `Retry-After` header.
+ * 
+ * @param {RateLimiterRedis} limiter - The rate limiter instance
+ * @param {string} key - The key to identify the requester (IP or email)
+ * @param {Response} response - Express response object
+ * @param {Function} next - Next middleware callback
+ */
 const handleRateLimiter = (limiter, key, response, next) => {
   limiter.consume(key)
     .then(() => next())
@@ -39,7 +70,14 @@ const handleRateLimiter = (limiter, key, response, next) => {
     });
 };
 
-exports.passwordResetRateLimit = (request, response, next) => {
+/**
+ * Rate limiting middleware for password reset requests.
+ * Applies 3 levels of rate limiting:
+ *  - 1 request every 30 seconds per email
+ *  - 3 requests per day per email
+ *  - 5 requests per day per IP
+ */
+exports.requestPasswordResetRateLimit = (request, response, next) => {
   const { email } = request.body;
   const ip = request.ip;
 
@@ -49,8 +87,6 @@ exports.passwordResetRateLimit = (request, response, next) => {
     });
   });
 };
-
-
 
 const otpVerifyLimiterEmail = new RateLimiterRedis({
   storeClient: redisClient,
@@ -66,6 +102,12 @@ const otpVerifyLimiterIP = new RateLimiterRedis({
   duration: 60 * 10,
 });
 
+/**
+ * Rate limiting middleware for OTP verification.
+ * Applies limits:
+ *  - 5 attempts per 5 minutes per email
+ *  - 10 attempts per 10 minutes per IP
+ */
 exports.otpVerifyRateLimit = (request, response, next) => {
   const { email } = request.body;
   const ip = request.ip;
@@ -73,4 +115,21 @@ exports.otpVerifyRateLimit = (request, response, next) => {
   handleRateLimiter(otpVerifyLimiterEmail, email, response, () => {
     handleRateLimiter(otpVerifyLimiterIP, ip, response, next);
   });
+};
+
+const limiterResetPasswordPerIP = new RateLimiterRedis({
+  storeClient: redisClient,
+  keyPrefix: 'reset_password_ip',
+  points: 1, 
+  duration: 60 * 10,
+});
+
+/**
+ * Rate limiting middleware for password reset execution.
+ * Applies limit:
+ *  - 1 reset attempt per 10 minutes per IP
+ */
+exports.resetPasswordRateLimit = (request, response, next) => {
+  const ip = request.ip;
+  handleRateLimiter(limiterResetPasswordPerIP, ip, response, next);
 };
