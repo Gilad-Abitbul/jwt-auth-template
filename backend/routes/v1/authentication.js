@@ -4,7 +4,13 @@ const router = express.Router();
 
 const authenticationController = require('../../controllers/authentication.js');
 const User = require('../../models/user.js');
-const {requestPasswordResetRateLimit, otpVerifyRateLimit, resetPasswordRateLimit} = require('../../middleware/rateLimiters.js');
+
+const {
+  passwordResetOtpRequestRateLimit,
+  passwordResetRequestRateLimit, 
+  passwordResetOtpVerifyRequestRateLimit
+} = require('../../middleware/rateLimiters.js');
+
 const validateRequest  = require('../../middleware/validate-request.js');
 /**
  * @route   POST /api/v1/signup
@@ -135,7 +141,7 @@ router.post(
  * - Rate limiting applies per email and IP
  */
 router.post(
-  '/request-password-reset',
+  '/request-password-reset-otp',
   [
     // Email validations
     body('email')
@@ -143,7 +149,7 @@ router.post(
       .normalizeEmail()
   ],
   validateRequest,
-  requestPasswordResetRateLimit,
+  passwordResetOtpRequestRateLimit,
   authenticationController.requestPasswordReset
 )
 
@@ -171,7 +177,7 @@ router.post(
  * - Rate limiting applies per email and IP
  */
 router.post(
-  '/verify-reset-otp',
+  '/verify-password-reset-otp',
   [
     // OTP validations
     body('otp')
@@ -183,7 +189,7 @@ router.post(
     .normalizeEmail()
   ],
   validateRequest,
-  otpVerifyRateLimit,
+  passwordResetOtpVerifyRequestRateLimit,
   authenticationController.verifyResetOtp
 )
 
@@ -228,7 +234,7 @@ router.post(
     .isUUID(4).withMessage('Invalid reset token.')
   ],
   validateRequest,
-  resetPasswordRateLimit,
+  passwordResetRequestRateLimit,
   authenticationController.resetPassword
 )
 

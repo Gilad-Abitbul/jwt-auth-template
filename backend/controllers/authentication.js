@@ -314,8 +314,6 @@ exports.resetPassword = async (request, response, next) => {
   try {
     const {resetToken, newPassword} = request.body;
     const redisKey = `reset_token:${resetToken}`;
-    console.log(redisKey);
-    await redisClient.showAllKeysAndValues();
     const email = await redisClient.get(redisKey);
     if (!email) {
       return response.status(400).json({
