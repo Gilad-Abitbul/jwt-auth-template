@@ -317,7 +317,6 @@ exports.resetPassword = async (request, response, next) => {
     console.log(redisKey);
     await redisClient.showAllKeysAndValues();
     const email = await redisClient.get(redisKey);
-    console.log(email);
     if (!email) {
       return response.status(400).json({
         message: 'Invalid or expired reset token.',
@@ -338,6 +337,13 @@ exports.resetPassword = async (request, response, next) => {
     await user.save();
     await redisClient.del(redisKey);
     logger.info(`Password reset for ${email}`);
+
+    const username = `${user.firstName} ${user.lastName}`;
+    const template = EmailFactory.create('reset-password-notification', {
+      username
+    });
+    await new EmailBuilder(template).setTo(email).send();
+
     return response.status(200).json({
       message: 'Password reset successfully.',
     });

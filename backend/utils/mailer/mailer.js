@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 
 const generateHtmlForConfirmEmail = require('./templates/confirmEmailTemplate.js');
 const generateHtmlForResetPassword = require('./templates/resetPasswordTemplate.js');
+const generateHtmlForPasswordResetNotification = require('./templates/passwordChangeNotificationTemplate.js');
 
 // Create and configure the nodemailer transporter using environment variables
 const transporter = nodemailer.createTransport({
@@ -61,6 +62,22 @@ class ResetPasswordEmailTemplate extends EmailTemplate {
   }
 }
 
+
+class ResetPasswordNotificationEmailTemplate extends EmailTemplate {
+  constructor(username) {
+    super();
+    this.username = username;
+  }
+
+  getSubject() {
+    return "Your Password Has Been Reset";
+  }
+
+  getHtml() {
+    return generateHtmlForPasswordResetNotification(this.username);
+  }
+}
+
 /**
  * Email template for email confirmation
  */
@@ -96,6 +113,8 @@ class EmailFactory {
         return new ResetPasswordEmailTemplate(data.username, data.otp);
       case "confirm-email":
         return new ConfirmEmailTemplate(data.username, data.verificationLink);
+      case "reset-password-notification":
+        return new ResetPasswordNotificationEmailTemplate(data.username);
       default:
         throw new Error("Unknown email type");
     }
