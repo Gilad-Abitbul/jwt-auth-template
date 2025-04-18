@@ -98,14 +98,25 @@ const handleRateLimiter = (limiter, key, response, next) => {
  * @param {function} next - Express next middleware function.
  * @param {number} index - Current index of the limiter to apply (used for recursion).
  */
-const applyRateLimits = (limitersArray, request, response, next, index = 0) => {
-  if (index >= limitersArray.length) {
-    return next();
+const applyRateLimits = async (limitersArray, req, res, next) => {
+  const promises = [];
+
+  for (const { limiter, key } of limitersArray) {
+    promises.push(limiter.consume(key(req)));
   }
-  const { limiter, key } = limitersArray[index];
-  handleRateLimiter(limiter, key(request), response, () =>
-    applyRateLimits(limitersArray, request, response, next, index + 1)
-  );
+
+  try {
+    await Promise.all(promises);
+    next();
+  } catch (err) {
+    const retrySecs = Math.round(err.msBeforeNext / 1000) || 1;
+    res.set('Retry-After', retrySecs);
+    logger.warn(`Rate limit triggered: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    return res.status(429).json({
+      message: 'Too many requests. Please try again later.',
+      retryAfterSeconds: retrySecs
+    });
+  }
 };
 
 /**

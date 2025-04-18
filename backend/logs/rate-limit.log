@@ -1,0 +1,3 @@
+2025-04-17T17:43:40.207Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":25581,"consumedPoints":2,"isFirstInDuration":false}
+2025-04-17T17:43:52.759Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":13029,"consumedPoints":3,"isFirstInDuration":false}
+2025-04-17T17:43:54.415Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":11374,"consumedPoints":4,"isFirstInDuration":false}
