@@ -117,6 +117,7 @@ router.post(
       .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character (e.g. @, #, $).')
       .not().matches(/\s/).withMessage('Password must not contain spaces.'),
   ],
+  validateRequest,
   authenticationController.loginUser
 )
 

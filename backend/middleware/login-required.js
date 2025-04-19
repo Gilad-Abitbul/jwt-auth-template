@@ -47,7 +47,7 @@ module.exports = (request, response, next) => {
     error.statusCode = 401;
     throw error;
   }
-
+ 
   // Check if the header is in the correct format 'Bearer <token>'
   const headerParts = header.split(' ');
   if (headerParts.length !== 2 || headerParts[0] !== 'Bearer') {

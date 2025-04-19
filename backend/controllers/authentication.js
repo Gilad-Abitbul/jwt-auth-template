@@ -163,13 +163,6 @@ exports.createUser = async (request, response, next) => {
  */
 exports.loginUser = async (request, response, next) => {
   try {
-    const errors = validationResult(request);
-    if (!errors.isEmpty()) {
-      const error = new Error('Email and password do not match');
-      error.statusCode = 401;
-      throw error;
-    }
-
     const { email, password } = request.body;
 
     const user = await User.findOne({ email: email });
