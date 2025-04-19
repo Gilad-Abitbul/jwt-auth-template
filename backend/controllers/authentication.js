@@ -366,9 +366,10 @@ exports.verifyEmail = async (request, response, next) => {
     user.verified = true;
     await user.save();
     logger.info(`Email verified for ${user.email}`);
-    return response.status(200).json({
-      message: 'Email verified successfully.',
-    });
+    // return response.status(200).json({
+    //   message: 'Email verified successfully.',
+    // });
+    return response.redirect(`https://${process.env.FRONTEND_DOMAIN}/email-verified`);
     } catch (error) {
       response.status(400).json({
         message: 'Invalid token',

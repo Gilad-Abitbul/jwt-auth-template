@@ -7,6 +7,7 @@ import { lightTheme, darkTheme } from './styles/themes';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HomePage from './pages/HomePage';
+import EmailVerified from './pages/EmailVerified';
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -21,13 +22,22 @@ function App() {
             path="/login"
             element={
               <LoginPage
-                toggleTheme={() => setIsDarkMode(!isDarkMode)}
+                toggleTheme={() => setIsDarkMode((prev) => !prev)}
                 isDarkMode={isDarkMode}
               />
             }
           />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route
+            path="/signup"
+            element={
+              <SignupPage
+                toggleTheme={() => setIsDarkMode((prev) => !prev)}
+                isDarkMode={isDarkMode}
+              />
+            }
+          />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/email-verified" element={<EmailVerified />} />
         </Routes>
       </Router>
     </ThemeProvider>
