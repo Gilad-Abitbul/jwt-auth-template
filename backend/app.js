@@ -1,7 +1,7 @@
 const express = require('express');
 const { connectDB } = require('./mongodb.js');
 const authenticationRoutes = require('./routes/v1/authentication.js');
-const errorHandler = require('./middleware/error.js');
+const errorHandler = require('./middlewares/error.js');
 const redisClient = require('./utils/redisClient.js');
 
 const app = express();
@@ -22,7 +22,7 @@ const startServer = async () => {
 
   app.listen(8080, () => {
     console.log("Server running on port 8080");
-    redisClient.deleteAllKeys();
+    redisClient.showAllKeysAndValues();
   });
 };
 

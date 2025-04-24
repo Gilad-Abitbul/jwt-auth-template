@@ -5,13 +5,24 @@ const router = express.Router();
 const authenticationController = require('../../controllers/authentication.js');
 const User = require('../../models/user.js');
 
-const {
-  passwordResetOtpRequestRateLimit,
-  passwordResetRequestRateLimit, 
-  passwordResetOtpVerifyRequestRateLimit
-} = require('../../middleware/rateLimiters.js');
+// const {
+//   passwordResetOtpRequestRateLimit,
+//   passwordResetRequestRateLimit, 
+//   passwordResetOtpVerifyRequestRateLimit
+// } = require('../../middleware/rateLimiters.js');
 
-const validateRequest  = require('../../middleware/validate-request.js');
+
+const RateLimiterManager = require('../../middlewares/RateLimiterManager.js');
+const limiterConfig = require('../../config/rateLimiterConfig.js');
+
+const otpRequestRateLimit = require('../../middlewares/otpLimiter.js');
+const limiter = new RateLimiterManager(limiterConfig);
+// const otpRequestRateLimit = limiter.middleware('passwordResetOtpRequest');
+const otpVerifyRateLimit = limiter.middleware('passwordResetOtpVerify');
+const passwordResetRateLimit = limiter.middleware('passwordResetExecution');
+
+
+const validateRequest  = require('../../middlewares/validate-request.js');
 /**
  * @route   POST /api/v1/signup
  * @desc    Register a new user account
@@ -150,7 +161,7 @@ router.post(
       .normalizeEmail()
   ],
   validateRequest,
-  passwordResetOtpRequestRateLimit,
+  otpRequestRateLimit,
   authenticationController.requestPasswordReset
 )
 
@@ -190,7 +201,7 @@ router.post(
     .normalizeEmail()
   ],
   validateRequest,
-  passwordResetOtpVerifyRequestRateLimit,
+  otpVerifyRateLimit,
   authenticationController.verifyResetOtp
 )
 
@@ -235,7 +246,7 @@ router.post(
     .isUUID(4).withMessage('Invalid reset token.')
   ],
   validateRequest,
-  passwordResetRequestRateLimit,
+  passwordResetRateLimit,
   authenticationController.resetPassword
 )
 

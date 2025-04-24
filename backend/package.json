@@ -4,6 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "inspect:redis": "node scripts/inspectRedis.js",
+    "clear:redis": "node scripts/clearRedis.js",
     "start": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

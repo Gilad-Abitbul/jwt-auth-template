@@ -178,7 +178,8 @@ exports.loginUser = async (request, response, next) => {
       error.statusCode = 401;
       throw error;
     }
-
+    
+    
     const token = jwt.sign(
       { userId: user._id.toString(), email: user.email },
       process.env.JWT_SECRET,
@@ -247,12 +248,12 @@ exports.requestPasswordReset = async (request, response, next) => {
     await redisClient.set(`password_reset:${email}`, hashedOtp, 'EX', 300);
     const username = `${user.firstName} ${user.lastName}`
 
-    const template = EmailFactory.create('reset-password', {
-      username,
-      otp
-    });
+    // const template = EmailFactory.create('reset-password', {
+    //   username,
+    //   otp
+    // });
 
-    await new EmailBuilder(template).setTo(email).send()
+    // await new EmailBuilder(template).setTo(email).send()
     
 
     // await sendEmail({
@@ -359,9 +360,10 @@ exports.verifyEmail = async (request, response, next) => {
     }
 
     if (user.verified) {
-      return response.status(200).json({
-        message: 'Email already verified.',
-      });
+      // return response.status(200).json({
+      //   message: 'Email already verified.',
+      // });
+      return response.redirect(`http://${process.env.FRONTEND_DOMAIN}/email-verified`);
     }
     user.verified = true;
     await user.save();
@@ -369,7 +371,7 @@ exports.verifyEmail = async (request, response, next) => {
     // return response.status(200).json({
     //   message: 'Email verified successfully.',
     // });
-    return response.redirect(`https://${process.env.FRONTEND_DOMAIN}/email-verified`);
+    return response.redirect(`http://${process.env.FRONTEND_DOMAIN}/email-verified`);
     } catch (error) {
       response.status(400).json({
         message: 'Invalid token',

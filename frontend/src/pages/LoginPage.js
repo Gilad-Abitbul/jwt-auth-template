@@ -184,6 +184,18 @@ function LoginPage({ toggleTheme, isDarkMode }) {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:8080/api/v1/reset-password', {newPassword, resetToken: resetFlow.resetToken})
+      if (res.status === 200) {
+        setResetFlow({
+          otpSent: false,
+          otpVerified: false,
+          resetToken: '',
+          otp: ['', '', '', '', '', ''],
+        });
+        setPassword(newPassword);
+        setNewPassword('');
+        setError(null);
+        setShowReset(false);
+      }
     } catch (err) {
       setError('Server Error. Try again later');
     }
