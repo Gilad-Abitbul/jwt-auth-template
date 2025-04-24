@@ -8,10 +8,7 @@ const jwt = require('jsonwebtoken');
 const { EmailBuilder, EmailFactory } = require('../utils/mailer/mailer.js');
 const {v4: uuidv4} = require('uuid');
 const logger = require('../utils/logger.js');
-
-//OTP management using mongodb:
-//const PasswordReset = require('../models/password-reset.js');
-
+const crypto = require('crypto');
 //OTP management using redis:
 const redisClient = require('../utils/redisClient.js');
 
@@ -218,6 +215,7 @@ exports.requestPasswordReset = async (request, response, next) => {
       throw error;
     }
     const { email } = request.body;
+    console.log('email', email);
     const maskedEmail = maskEmail(email);
     const user = await User.findOne({email: email});
     if (!user) {
@@ -225,44 +223,36 @@ exports.requestPasswordReset = async (request, response, next) => {
         message: `If the email ${maskedEmail} exists, a reset code was sent.`
       });
     }
-
-    //OTP management using mongodb:
-    // await PasswordReset.deleteMany({
-    //   user: user._id,
-    //   used: false,
-    // });
-
+    
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10);
     const hashedOtp = await bcrypt.hash(otp, saltRounds);
   
-    //OTP management using mongodb:
-    // await PasswordReset.create({
-    //   user: user._id,
-    //   hashedOtp,
-    //   expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
-    // });
-    
     //OTP management using redis:
-    await redisClient.deleteKey(`password_reset:${email}`);
-    await redisClient.set(`password_reset:${email}`, hashedOtp, 'EX', 300);
+    const redisKey = `passwordResetOTP:${user.email}`;
+    
+    //Invalidate the previous OTP, if it exists in memory.
+    await redisClient.del(redisKey);
+
+    const redisValue = JSON.stringify({
+      userId: user._id.toString(),
+      hashedOtp,
+      attemptsLeft: 3
+    })
+
+    //Setting a new OTP for the user with a 5 minute time validity
+    await redisClient.set(redisKey, redisValue, 'EX', 300);
+
     const username = `${user.firstName} ${user.lastName}`
 
-    // const template = EmailFactory.create('reset-password', {
-    //   username,
-    //   otp
-    // });
+    const template = EmailFactory.create('reset-password', {
+      username,
+      otp
+    });
 
-    // await new EmailBuilder(template).setTo(email).send()
+    await new EmailBuilder(template).setTo(user.email).send()
     
-
-    // await sendEmail({
-    //   type: 'reset-password',
-    //   to: email,
-    //   username,
-    //   otp
-    // })
-
     return response.status(200).json({
       message: `If the email ${maskedEmail} exists, a reset code was sent.`
     });
@@ -274,26 +264,52 @@ exports.requestPasswordReset = async (request, response, next) => {
 exports.verifyResetOtp = async (request, response, next) => {
   try {
     const {email, otp} = request.body;
-    const redisOtpKey = `password_reset:${email}`;
-    const hashedOtp = await redisClient.get(redisOtpKey);
-    if (!hashedOtp) {
+
+    let redisKey = `passwordResetOTP:${email}`;
+    const redisValue = await redisClient.get(redisKey);
+
+    if (!redisValue) {
       return response.status(400).json({
         message: 'Invalid OTP or expired',
       });
     }
-
-    const isMatch = await bcrypt.compare(otp, hashedOtp);
-    if (!isMatch) {
-      return response.status(401).json({
-        message: 'Invalid OTP',
+    const parsedRedisValue = JSON.parse(redisValue);
+    const {attemptsLeft, hashedOtp} = parsedRedisValue;
+    if (attemptsLeft <= 0) {
+      return response.status(400).json({
+        message: 'You have exceeded the number of attempts. Please request a new OTP.',
       });
     }
 
-    await redisClient.del(redisOtpKey);
+    const isMatch = await bcrypt.compare(otp, hashedOtp);
+
+    if (!isMatch) {
+      const updatedRedisValue = {
+        ...parsedRedisValue,
+        attemptsLeft: attemptsLeft - 1,
+      }
+
+      await redisClient.set(redisKey, JSON.stringify(updatedRedisValue), 'EX', 300);
+
+      return response.status(401).json({
+        message: `Invalid OTP. Attempts left: ${attemptsLeft - 1}`,
+      });
+    }
+
+    await redisClient.del(redisKey);
 
     const resetToken = uuidv4();
-    const redisKey = `reset_token:${resetToken}`;
-    await redisClient.set(redisKey, email, 'EX', 600);
+    redisKey = `passwordResetToken:${resetToken}`;
+
+    const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+    const IV = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, IV);
+    let encrypted = cipher.update(email, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const payload = `${IV.toString('hex')}:${encrypted}`;
+    console.log('RT(E) = ', payload);
+    
+    await redisClient.set(redisKey, payload, 'EX', 600);
 
     return response.status(200).json({
       message: 'OTP verified successfully.',
@@ -307,15 +323,27 @@ exports.verifyResetOtp = async (request, response, next) => {
 exports.resetPassword = async (request, response, next) => {
   try {
     const {resetToken, newPassword} = request.body;
-    const redisKey = `reset_token:${resetToken}`;
-    const email = await redisClient.get(redisKey);
-    if (!email) {
+
+    const redisKey = `passwordResetToken:${resetToken}`;
+
+    const encrypted = await redisClient.get(redisKey);
+    if (!encrypted) {
       return response.status(400).json({
         message: 'Invalid or expired reset token.',
       });
     }
 
-    const user = await User.findOne({email: email});
+    const [ivHex, encryptedHex] = encrypted.split(':');
+    const IV = Buffer.from(ivHex, 'hex');
+    const encryptedText = Buffer.from(encryptedHex, 'hex');
+    const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, IV);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    console.log('decrypted ', decrypted);
+    
+
+    const user = await User.findOne({email: decrypted});
     if (!user) {
       return response.status(404).json({
         message: 'User not found',
@@ -328,13 +356,13 @@ exports.resetPassword = async (request, response, next) => {
     user.password = hashedPassword;
     await user.save();
     await redisClient.del(redisKey);
-    logger.info(`Password reset for ${email}`);
+    logger.info(`Password reset for ${decrypted}`);
 
     const username = `${user.firstName} ${user.lastName}`;
     const template = EmailFactory.create('reset-password-notification', {
       username
     });
-    await new EmailBuilder(template).setTo(email).send();
+    await new EmailBuilder(template).setTo(user.email).send();
 
     return response.status(200).json({
       message: 'Password reset successfully.',

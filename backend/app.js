@@ -3,8 +3,10 @@ const { connectDB } = require('./mongodb.js');
 const authenticationRoutes = require('./routes/v1/authentication.js');
 const errorHandler = require('./middlewares/error.js');
 const redisClient = require('./utils/redisClient.js');
-
+const globalRateLimiter = require('./middlewares/globalRateLimiter.js');
 const app = express();
+
+app.use(globalRateLimiter);
 
 app.use(express.json());
 
@@ -16,6 +18,7 @@ app.use((request, response, next) => {
 })
 
 app.use('/api/v1', authenticationRoutes);
+
 app.use(errorHandler);
 const startServer = async () => {
   await connectDB();

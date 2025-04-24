@@ -1,8 +1,0 @@
-2025-04-24T06:37:57.921Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":25716,"consumedPoints":2,"isFirstInDuration":false}
-2025-04-24T06:37:58.720Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":24916,"consumedPoints":3,"isFirstInDuration":false}
-2025-04-24T06:37:59.383Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":24254,"consumedPoints":4,"isFirstInDuration":false}
-2025-04-24T06:38:00.027Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":23608,"consumedPoints":5,"isFirstInDuration":false}
-2025-04-24T06:38:00.744Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":22892,"consumedPoints":6,"isFirstInDuration":false}
-2025-04-24T06:38:01.570Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":22067,"consumedPoints":7,"isFirstInDuration":false}
-2025-04-24T06:38:02.368Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":21268,"consumedPoints":8,"isFirstInDuration":false}
-2025-04-24T06:38:03.005Z [WARN]: Rate limit triggered: {"remainingPoints":0,"msBeforeNext":20632,"consumedPoints":9,"isFirstInDuration":false}

@@ -26,11 +26,7 @@ const resetOtpPerDayIP = new RateLimiterRedis({
 });
 
 const otpLimiter = async (req, res, next) => {
-  const email = req.body.email;
-  if (!email) {
-    return res.status(400).json({ message: 'Email is required' });
-  }
-
+  const {email} = req.body;
   const emailKey = hash(email);
   const ipKey = req.ip;
 
