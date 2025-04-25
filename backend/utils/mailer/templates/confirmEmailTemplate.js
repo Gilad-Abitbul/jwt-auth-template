@@ -34,18 +34,7 @@ const generateConfirmEmailHtml = (username, verificationLink) => {
           text-align: center;
           margin: 30px 0;
         }
-        .verify-button {
-          display: inline-block;
-          background-color: #007acc;
-          color: white;
-          padding: 12px 25px;
-          text-decoration: none;
-          font-size: 16px;
-          border-radius: 6px;
-        }
-        .verify-button:hover {
-          background-color: #005fa3;
-        }
+
         .footer {
           margin-top: 30px;
           font-size: 14px;
@@ -68,7 +57,10 @@ const generateConfirmEmailHtml = (username, verificationLink) => {
         <p>Welcome to our app! To start enjoying our services, please verify your email address by clicking the button below:</p>
         
         <div class="verify-box">
-          <a href="${verificationLink}" class="verify-button">Verify Email</a>
+          <a href="${verificationLink}" 
+            style="display:inline-block; background-color:#007acc; color:white; padding:12px 25px; text-decoration:none; font-size:16px; border-radius:6px;">
+            Verify Email
+          </a>
         </div>
         
         <p>If you didn't sign up for our app, feel free to ignore this email.</p>

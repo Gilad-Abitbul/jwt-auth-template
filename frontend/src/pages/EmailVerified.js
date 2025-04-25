@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
+import { useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 const Container = styled.div`
   font-family: Arial, sans-serif;
@@ -30,6 +32,28 @@ const Message = styled.p`
   margin: 20px 0;
 `;
 
+const Input = styled.input`
+  padding: 10px;
+  width: 100%;
+  margin-top: 20px;
+  font-size: 16px;
+`;
+
+const Button = styled.button`
+  background-color: #007acc;
+  color: white;
+  border: none;
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+
+  &:hover {
+    background-color: #005fa3;
+  }
+`;
+
 const Footer = styled.div`
   margin-top: 30px;
   font-size: 14px;
@@ -46,11 +70,42 @@ const FooterLink = styled.a`
 `;
 
 const EmailVerified = () => {
+  const query = new URLSearchParams(useLocation().search);
+  const status = query.get("status");
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+
+  const resendVerification = async () => {
+    try {
+      await axios.post('http://localhost:4000/api/auth/resend-verification', { email }); // שנה לפי ה-URL שלך
+      setMessage('Verification email sent successfully!');
+    } catch (error) {
+      setMessage('Failed to send verification email. Please try again.');
+    }
+  };
+
   return (
     <Container>
       <Box>
-        <Title>Email Verified</Title>
-        <Message>Your email has been successfully verified. You can now enjoy all features of the app.</Message>
+        {status === "success" ? (
+          <>
+            <Title>Email Verified</Title>
+            <Message>Your email has been successfully verified. You can now enjoy all features of the app.</Message>
+          </>
+        ) : (
+          <>
+            <Title>Email Verification Failed</Title>
+            <Message>We couldn't verify your email. Please enter your email to resend the verification link.</Message>
+            <Input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
+            <Button onClick={resendVerification}>Resend Verification</Button>
+            {message && <Message>{message}</Message>}
+          </>
+        )}
         <Footer>
           <p>Developed by <strong>Gilad Abitbul</strong></p>
           <p>

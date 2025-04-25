@@ -255,4 +255,16 @@ router.get(
   authenticationController.verifyEmail
 )
 
+router.post(
+  '/resend-verification',
+  [
+    // Email validations
+    body('email')
+    .isEmail().withMessage('Invalid email address.')
+    .normalizeEmail()
+  ],
+  validateRequest,
+  authenticationController.resendVerificationEmail
+)
+
 module.exports = router;

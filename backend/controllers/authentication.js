@@ -9,6 +9,8 @@ const { EmailBuilder, EmailFactory } = require('../utils/mailer/mailer.js');
 const {v4: uuidv4} = require('uuid');
 const logger = require('../utils/logger.js');
 const crypto = require('crypto');
+const {encrypt, decrypt} = require('../utils/encryption.js')
+
 //OTP management using redis:
 const redisClient = require('../utils/redisClient.js');
 
@@ -301,14 +303,8 @@ exports.verifyResetOtp = async (request, response, next) => {
     const resetToken = uuidv4();
     redisKey = `passwordResetToken:${resetToken}`;
 
-    const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
-    const IV = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, IV);
-    let encrypted = cipher.update(email, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    const payload = `${IV.toString('hex')}:${encrypted}`;
-    console.log('RT(E) = ', payload);
-    
+    const payload = encrypt(email);
+
     await redisClient.set(redisKey, payload, 'EX', 600);
 
     return response.status(200).json({
@@ -326,23 +322,15 @@ exports.resetPassword = async (request, response, next) => {
 
     const redisKey = `passwordResetToken:${resetToken}`;
 
-    const encrypted = await redisClient.get(redisKey);
-    if (!encrypted) {
+    const cipher = await redisClient.get(redisKey);
+    if (!cipher) {
       return response.status(400).json({
         message: 'Invalid or expired reset token.',
       });
     }
 
-    const [ivHex, encryptedHex] = encrypted.split(':');
-    const IV = Buffer.from(ivHex, 'hex');
-    const encryptedText = Buffer.from(encryptedHex, 'hex');
-    const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, IV);
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    console.log('decrypted ', decrypted);
+    const decrypted = decrypt(cipher);
     
-
     const user = await User.findOne({email: decrypted});
     if (!user) {
       return response.status(404).json({
@@ -388,21 +376,50 @@ exports.verifyEmail = async (request, response, next) => {
     }
 
     if (user.verified) {
-      // return response.status(200).json({
-      //   message: 'Email already verified.',
-      // });
-      return response.redirect(`http://${process.env.FRONTEND_DOMAIN}/email-verified`);
+      return response.redirect(`http://${process.env.FRONTEND_DOMAIN}/email-verified?status=success`);
     }
     user.verified = true;
     await user.save();
     logger.info(`Email verified for ${user.email}`);
-    // return response.status(200).json({
-    //   message: 'Email verified successfully.',
-    // });
-    return response.redirect(`http://${process.env.FRONTEND_DOMAIN}/email-verified`);
+    return response.redirect(`http://${process.env.FRONTEND_DOMAIN}/email-verified?status=success`);
     } catch (error) {
-      response.status(400).json({
-        message: 'Invalid token',
-      })
+      return response.redirect(`http://${process.env.FRONTEND_DOMAIN}/email-verified?status=invalid`);
     }
   }
+
+exports.resendVerificationEmail = async (request, response, next) => {
+  try {
+    const { email } = request.body;
+    const user = await User.findOne({email: email});
+    const maskedEmail = maskEmail(email);
+
+    if (!user || user.verified) {
+      return response.status(200).json({
+        message: `If the email ${maskedEmail} exists, a verification email was sent.`
+      });
+    }
+    
+    const token = jwt.sign(
+      { userId: user._id }, 
+      process.env.JWT_SECRET,
+      { expiresIn: '1d'}
+    )
+
+    const username = `${user.firstName} ${user.lastName}`;
+    const verificationLink = `${process.env.BACKEND_DOMAIN}/api/v1/verify-email?token=${token}`;
+
+    const template = EmailFactory.create('confirm-email', {
+      username,
+      verificationLink,
+    })
+
+    await new EmailBuilder(template).setTo(email).send();
+    return response.status(200).json({
+      message: `If the email ${maskedEmail} exists, a verification email was sent.`
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: 'Something went wrong. Please try again later.',
+    });
+  }
+} 
