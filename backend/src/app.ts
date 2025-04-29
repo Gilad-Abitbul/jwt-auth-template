@@ -3,12 +3,10 @@ import { connectDB } from './mongodb';
 import authenticationRoutes from './routes/v1/authentication';
 import errorHandler from './middlewares/error';
 import redisClient from './utils/redisClient';
-// import globalRateLimiter from './middlewares/globalRateLimiter';
-import { encrypt, decrypt } from './utils/encryption'
+import globalRateLimiter from './middlewares/globalRateLimiter';
 const app = express();
 
-// שימוש במתאם (middleware) של מגבלת קצב גלובלית
-// app.use(globalRateLimiter);
+app.use(globalRateLimiter);
 
 app.use(express.json());
 

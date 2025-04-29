@@ -18,6 +18,7 @@ import { body } from 'express-validator';
 import * as authenticationController from '../../controllers/authentication';
 import User from '../../models/user';
 import validateRequest from '../../middlewares/validate-request';
+import otpLimiter from '../../middlewares/otpLimiter';
 
 const router = express.Router();
 
@@ -108,6 +109,7 @@ router.post(
       .normalizeEmail(),
   ],
   validateRequest,
+  otpLimiter,
   authenticationController.requestPasswordReset
 );
 

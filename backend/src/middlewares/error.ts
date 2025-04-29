@@ -17,10 +17,12 @@ const errorHandler = (
   const statusCode = (error as HttpError).statusCode || 500; // Default to 500 if no statusCode
   const message = (error as HttpError).message || 'Internal server error'; // Default message
   const details = (error as HttpError).details || null; // Error details if available
+  const meta = (error as HttpError).meta || null;
 
   response.status(statusCode).json({
     message: message,
     details: details,
+    meta: meta
   });
 };
 

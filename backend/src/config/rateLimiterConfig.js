@@ -6,4 +6,4 @@ module.exports = {
   passwordResetExecution: [
     { keyPrefix: 'ResetPerIP', points: 1, duration: 600, keyBy: 'ip' },
   ],
-};
+}; 

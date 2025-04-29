@@ -1,74 +1,30 @@
 // Loads environment variables from the .env file (***only in development environment***)
 import dotenv from 'dotenv';
 dotenv.config();
+
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/user';
 import bcrypt from 'bcryptjs';
-import { validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import { EmailBuilder, EmailFactory } from '../utils/mailer/mailer';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
-import crypto from 'crypto';
 import { encrypt, decrypt } from '../utils/encryption';
 import HttpError from '../utils/HttpError';
 import { Types } from 'mongoose';
-
-// OTP management using redis:
 import redisClient from '../utils/redisClient';
 
-/**
- * @function createUser
- * @description
- * Handles the creation of a new user in the system.
- * 
- * This controller:
- * 1. Validates the request body using express-validator.
- * 2. If validation fails, throws a 422 error with a structured list of field-specific validation messages.
- * 3. If validation passes, hashes the user's password using bcrypt.
- * 4. Creates and saves the user to the database.
- * 5. Responds with a 201 status code and the user's ID on success.
- * 6. On internal errors, forwards a 500 error to the error-handling middleware.
- * 
- * @access Public
- * @route POST /api/auth/signup
- * @param {Object} request - Express request object. Expects a JSON body with the following fields:
- *   - email: string (must be a valid email format)
- *   - password: string (5-12 chars, must include uppercase, lowercase, number, special char)
- *   - firstName: string (3-12 chars, no spaces)
- *   - lastName: string (3-12 chars, no spaces)
- * @param {Object} response - Express response object.
- * @param {Function} next - Express next middleware function.
- * 
- * @returns {Object} 201 JSON response on success:
- * {
- *   message: "User created successfully!",
- *   userId: "<MongoDB User ID>"
- * }
- * 
- * @throws {Error} 422 - Validation error. JSON response:
- * {
- *   message: "Error - Invalid Input",
- *   details: {
- *     email: [ "Please enter a valid email address." ],
- *     password: [
- *       "Password must be between 5 and 12 characters long.",
- *       "Password must contain at least one uppercase letter.",
- *       ...
- *     ],
- *     ...
- *   }
- * }
- * 
- * @throws {Error} 500 - Internal server error (e.g., hashing or database failure). JSON response:
- * {
- *   message: "Error creating user!"
- * }
- */
-export const createUser = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
-  try {
 
-    const { email, password, firstName, lastName } = request.body;
+interface CreateUserRequestBody {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
+export const createUser = async (req: Request<{}, {}, CreateUserRequestBody>, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
 
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS as string, 10);
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -82,8 +38,10 @@ export const createUser = async (request: Request, response: Response, next: Nex
 
     const savedUser = await user.save();
 
+    const userId = (savedUser._id as Types.ObjectId).toString();
+
     const token = jwt.sign(
-      { userId: savedUser._id },
+      { userId },
       process.env.JWT_SECRET as string,
       { expiresIn: '1d' }
     );
@@ -98,55 +56,13 @@ export const createUser = async (request: Request, response: Response, next: Nex
 
     await new EmailBuilder(template).setTo(email).send();
 
-    const userId = (savedUser._id as Types.ObjectId).toString();
-    response.status(201).json({ message: 'User created successfully!', userId });
+    res.status(201).json({ message: 'User created successfully!', userId });
 
   } catch (error) {
-    if (!(error instanceof HttpError)) {
-      error = new HttpError('Error creating user!', 500);
-    }
-    next(error);
+    next(error instanceof HttpError ? error : new HttpError('Error Creating User!', 500));
   }
 };
 
-/**
- * @function loginUser
- * @description
- * Handles user login by validating credentials and authenticating the user.
- * 
- * This controller:
- * 1. Validates the request body using express-validator.
- * 2. If validation fails, throws a 401 Unauthorized error with a generic message.
- * 3. Attempts to find a user by email in the database.
- * 4. If the user does not exist or the password is incorrect, throws a 401 error.
- * 5. If authentication is successful, responds with a 200 status code, user ID, and a JWT token.
- * 6. On unexpected internal errors, forwards a 500 error to the error-handling middleware.
- * 
- * @access Public
- * @route POST /api/auth/login
- * @param {Object} request - Express request object. Expects a JSON body with the following fields:
- *   - email: string (must be a valid email format)
- *   - password: string (minimum 5 characters)
- * @param {Object} response - Express response object.
- * @param {Function} next - Express next middleware function.
- * 
- * @returns {Object} 200 JSON response on success:
- * {
- *   message: "Login successful!",
- *   userId: "<MongoDB User ID>",
- *   token: "<JWT token>"
- * }
- * 
- * @throws {Error} 401 - Unauthorized error if email or password is invalid. JSON response:
- * {
- *   message: "Email and password do not match"
- * }
- * 
- * @throws {Error} 500 - Internal server error (e.g., database or hashing failure). JSON response:
- * {
- *   message: "Error logging in user!"
- * }
- */
 
 export const loginUser = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
   try {
