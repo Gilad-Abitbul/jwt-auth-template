@@ -1,4 +1,6 @@
-const { validationResult } = require('express-validator');
+import { Request, Response, NextFunction } from 'express';
+import { validationResult, ValidationError } from 'express-validator';
+import HttpError from '../utils/HttpError';
 
 /**
  * @middleware validateRequest
@@ -33,19 +35,31 @@ const { validationResult } = require('express-validator');
  *   loginController
  * );
  */
-const validateRequest = (request, response, next) => {
+
+
+const validateRequest = (request: Request, response: Response, next: NextFunction): void => {
+  type ExtendedValidationError = ValidationError & { path: string };
   const errors = validationResult(request);
   if (!errors.isEmpty()) {
-    const formattedErrors = {};
-    errors.array().forEach(error => {
-      if (!formattedErrors[error.path]) {
-        formattedErrors[error.path] = [];
+    const formattedErrors: { [key: string]: string[] } = {};
+
+    // Format errors into a field-based object
+    errors.array().forEach((error: ValidationError) => {
+      if (error.type === 'field') {
+        if (!formattedErrors[error.path]) {
+          formattedErrors[error.path] = [];
+        }
+        formattedErrors[error.path].push(error.msg);
       }
-      formattedErrors[error.path].push(error.msg);
     });
-    return response.status(400).json({ message: "Invalid Input", details: formattedErrors });
+
+    // Return a 400 status with the formatted error details
+    const error = new HttpError('Invalid Request Data!', 400, formattedErrors);
+    return next(error);
   }
-  next(); 
+
+  // Proceed to the next middleware/handler if validation passes
+  next();
 };
 
-module.exports = validateRequest;
+export default validateRequest;

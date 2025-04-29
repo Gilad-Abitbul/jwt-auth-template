@@ -1,6 +1,6 @@
 const { RateLimiterRedis } = require('rate-limiter-flexible');
-const redisClient = require('../utils/redisClient');
-const logger = require('../utils/logger');
+const redisClient = require('../src/utils/redisClient');
+const logger = require('../src/utils/logger');
 const blockedIps = new Map();
 
 const loadBlacklistFromRedis = async () => {

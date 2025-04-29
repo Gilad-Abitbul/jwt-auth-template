@@ -4,8 +4,8 @@
  * @param {string} otp - One-time password for password reset
  * @returns {string} HTML content
  */
-const generateResetPasswordHtml = (username, otp) => {
-  const formattedOtp = otp.toString().split('').join(' ');
+const generateResetPasswordHtml = (username: string, otp: string): string => {
+  const formattedOtp = otp.split('').join(' ');
   return `
     <!DOCTYPE html>
     <html>
@@ -78,4 +78,4 @@ const generateResetPasswordHtml = (username, otp) => {
   `;
 }
 
-module.exports = generateResetPasswordHtml;
+export default generateResetPasswordHtml;

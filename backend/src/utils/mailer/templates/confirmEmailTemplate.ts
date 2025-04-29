@@ -1,15 +1,16 @@
 /**
- * Generates HTML for the "Password Changed" email template
+ * Generates HTML for the "Confirm Email" email template
  * @param {string} username - The recipient's username
+ * @param {string} verificationLink - The link to verify the user's email
  * @returns {string} HTML content
  */
-const generatePasswordChangedHtml = (username) => {
+const generateConfirmEmailHtml = (username: string, verificationLink: string): string => {
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Password Changed</title>
+      <title>Email Verification</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -29,6 +30,11 @@ const generatePasswordChangedHtml = (username) => {
           color: #007acc;
           text-align: center;
         }
+        .verify-box {
+          text-align: center;
+          margin: 30px 0;
+        }
+
         .footer {
           margin-top: 30px;
           font-size: 14px;
@@ -48,9 +54,16 @@ const generatePasswordChangedHtml = (username) => {
       <div class="container">
         <h1>My Node.js Backend</h1>
         <p>Hello ${username},</p>
-        <p>Your password has been successfully changed.</p>
-        <p>If you made this change, you can safely ignore this email.</p>
-        <p>However, if you did <strong>not</strong> make this change, we recommend resetting your password immediately from the app or website to secure your account.</p>
+        <p>Welcome to our app! To start enjoying our services, please verify your email address by clicking the button below:</p>
+        
+        <div class="verify-box">
+          <a href="${verificationLink}" 
+            style="display:inline-block; background-color:#007acc; color:white; padding:12px 25px; text-decoration:none; font-size:16px; border-radius:6px;">
+            Verify Email
+          </a>
+        </div>
+        
+        <p>If you didn't sign up for our app, feel free to ignore this email.</p>
 
         <div class="footer">
           <p>Developed by <strong>Gilad Abitbul</strong></p>
@@ -64,6 +77,6 @@ const generatePasswordChangedHtml = (username) => {
     </body>
     </html>
   `;
-}
+};
 
-module.exports = generatePasswordChangedHtml;
+export default generateConfirmEmailHtml;
