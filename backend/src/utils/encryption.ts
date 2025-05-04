@@ -18,7 +18,7 @@
 import * as crypto from 'crypto';
 import dotenv from 'dotenv';
 
-// Loads environment variables from the .env file (***only in development environment***)
+// Load environment variables from the .env file
 dotenv.config();
 
 const algorithm = 'aes-256-cbc';

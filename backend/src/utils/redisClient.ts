@@ -144,4 +144,4 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-export default redisClient;
+export default redisClient as ExtendedRedis;

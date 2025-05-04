@@ -1,15 +1,13 @@
-/**
- * Generates HTML for the "Password Changed" email template
- * @param {string} username - The recipient's username
- * @returns {string} HTML content
- */
-const generatePasswordChangedHtml = (username: string): string => {
-  return `
+import { OtpEmailData } from '../emailTypes';
+
+export const generateOtpEmail = ({ user, otp }: OtpEmailData) => ({
+  subject: 'Your OTP Code',
+  html: `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Password Changed</title>
+      <title>Password Reset</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -29,6 +27,16 @@ const generatePasswordChangedHtml = (username: string): string => {
           color: #007acc;
           text-align: center;
         }
+        .code-box {
+          font-size: 24px;
+          font-weight: bold;
+          background-color: #f0f8ff;
+          border: 1px dashed #007acc;
+          padding: 15px;
+          text-align: center;
+          margin: 20px 0;
+          border-radius: 6px;
+        }
         .footer {
           margin-top: 30px;
           font-size: 14px;
@@ -47,10 +55,10 @@ const generatePasswordChangedHtml = (username: string): string => {
     <body>
       <div class="container">
         <h1>My Node.js Backend</h1>
-        <p>Hello ${username},</p>
-        <p>Your password has been successfully changed.</p>
-        <p>If you made this change, you can safely ignore this email.</p>
-        <p>However, if you did <strong>not</strong> make this change, we recommend resetting your password immediately from the app or website to secure your account.</p>
+        <p>Hello ${user.firstName} ${user.lastName},</p>
+        <p>You have requested to reset your password from our app. Use the following code to complete the reset process:</p>
+        <div class="code-box">${otp}</div>
+        <p>This code will expire in 5 minutes. If you didn’t request this, you can safely ignore this email.</p>
 
         <div class="footer">
           <p>Developed by <strong>Gilad Abitbul</strong></p>
@@ -63,7 +71,5 @@ const generatePasswordChangedHtml = (username: string): string => {
       </div>
     </body>
     </html>
-  `;
-}
-
-export default generatePasswordChangedHtml;
+  `,
+});

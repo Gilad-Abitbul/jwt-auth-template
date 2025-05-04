@@ -4,6 +4,11 @@ import authenticationRoutes from './routes/v1/authentication';
 import errorHandler from './middlewares/error';
 import redisClient from './utils/redisClient';
 import globalRateLimiter from './middlewares/globalRateLimiter';
+import dotenv from 'dotenv';
+
+// Load environment variables from the .env file
+dotenv.config();
+
 const app = express();
 
 app.use(globalRateLimiter);

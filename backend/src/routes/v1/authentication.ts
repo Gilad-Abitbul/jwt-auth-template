@@ -15,7 +15,7 @@
  */
 import express, { Request, Response, NextFunction } from 'express';
 import { body } from 'express-validator';
-import * as authenticationController from '../../controllers/authentication';
+import * as authenticationController from '../../controllers/auth.controller';
 import User from '../../models/user';
 import validateRequest from '../../middlewares/validate-request';
 import otpLimiter from '../../middlewares/otpLimiter';
@@ -64,6 +64,7 @@ router.post(
       .isLength({ min: 3, max: 12 }).withMessage('Last name must be between 3 and 12 characters.')
       .matches(/^[^\s]+$/).withMessage('Last name must not contain spaces.'),
   ],
+  validateRequest,
   authenticationController.createUser
 );
 

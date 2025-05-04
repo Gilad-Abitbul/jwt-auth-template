@@ -1,11 +1,8 @@
-/**
- * Generates HTML for the "Confirm Email" email template
- * @param {string} username - The recipient's username
- * @param {string} verificationLink - The link to verify the user's email
- * @returns {string} HTML content
- */
-const generateConfirmEmailHtml = (username: string, verificationLink: string): string => {
-  return `
+import { VerifyEmailData } from '../emailTypes';
+
+export const generateVerifyEmail = ({ user, verificationLink }: VerifyEmailData) => ({
+  subject: 'Verify Your Email',
+  html: `
     <!DOCTYPE html>
     <html>
     <head>
@@ -53,7 +50,7 @@ const generateConfirmEmailHtml = (username: string, verificationLink: string): s
     <body>
       <div class="container">
         <h1>My Node.js Backend</h1>
-        <p>Hello ${username},</p>
+        <p>Hello ${user.firstName} ${user.lastName},</p>
         <p>Welcome to our app! To start enjoying our services, please verify your email address by clicking the button below:</p>
         
         <div class="verify-box">
@@ -76,7 +73,5 @@ const generateConfirmEmailHtml = (username: string, verificationLink: string): s
       </div>
     </body>
     </html>
-  `;
-};
-
-export default generateConfirmEmailHtml;
+  `,
+});

@@ -1,19 +1,15 @@
-// Loads environment variables from the .env file (***only in development environment***)
-import dotenv from 'dotenv';
-dotenv.config();
-
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/user';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { EmailBuilder, EmailFactory } from '../utils/mailer/mailer';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
 import { encrypt, decrypt } from '../utils/encryption';
 import HttpError from '../utils/HttpError';
 import { Types } from 'mongoose';
 import redisClient from '../utils/redisClient';
-
+import { EmailService } from '../utils/email/emailService';
+import { AuthService } from '../service/auth.service';
 
 interface CreateUserRequestBody {
   email: string;
@@ -22,42 +18,14 @@ interface CreateUserRequestBody {
   lastName: string;
 }
 
-export const createUser = async (req: Request<{}, {}, CreateUserRequestBody>, res: Response, next: NextFunction): Promise<void> => {
+export const createUser = async (
+  req: Request<{}, {}, CreateUserRequestBody>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
-    const { email, password, firstName, lastName } = req.body;
-
-    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS as string, 10);
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const user = new User({
-      email,
-      password: hashedPassword,
-      firstName,
-      lastName,
-    });
-
-    const savedUser = await user.save();
-
-    const userId = (savedUser._id as Types.ObjectId).toString();
-
-    const token = jwt.sign(
-      { userId },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '1d' }
-    );
-
-    const username = `${firstName} ${lastName}`;
-    const verificationLink = `${process.env.BACKEND_DOMAIN}/api/v1/verify-email?token=${token}`;
-
-    const template = EmailFactory.create('confirm-email', {
-      username,
-      verificationLink,
-    });
-
-    await new EmailBuilder(template).setTo(email).send();
-
+    const userId = await AuthService.registerUser(req.body);
     res.status(201).json({ message: 'User created successfully!', userId });
-
   } catch (error) {
     next(error instanceof HttpError ? error : new HttpError('Error Creating User!', 500));
   }
@@ -169,12 +137,16 @@ export const requestPasswordReset = async (request: Request, response: Response,
 
     const username = `${user.firstName} ${user.lastName}`;
 
-    const template = EmailFactory.create('reset-password', {
-      username,
+    await EmailService.sendEmail('OTP', {
+      user,
       otp
-    });
+    })
+    // const template = EmailFactory.create('reset-password', {
+    //   username,
+    //   otp
+    // });
 
-    await new EmailBuilder(template).setTo(user.email).send();
+    // await new EmailBuilder(template).setTo(user.email).send();
 
     response.status(200).json({
       message: `If the email ${maskedEmail} exists, a reset code was sent.`
@@ -294,12 +266,9 @@ export const resetPassword = async (request: Request, response: Response, next: 
 
     logger.info(`Password reset for ${decrypted}`);
 
-    const username = `${user.firstName} ${user.lastName}`;
-    const template = EmailFactory.create('reset-password-notification', {
-      username
+    await EmailService.sendEmail('RESET_SUCCESS', {
+      user
     });
-
-    await new EmailBuilder(template).setTo(user.email).send();
 
     response.status(200).json({
       message: 'Password reset successfully.',
@@ -357,15 +326,12 @@ export const resendVerificationEmail = async (request: Request, response: Respon
       { expiresIn: '1d' }
     );
 
-    const username = `${user.firstName} ${user.lastName}`;
     const verificationLink = `${process.env.BACKEND_DOMAIN}/api/v1/verify-email?token=${token}`;
 
-    const template = EmailFactory.create('confirm-email', {
-      username,
-      verificationLink,
-    });
-
-    await new EmailBuilder(template).setTo(email).send();
+    EmailService.sendEmail('VERIFY', {
+      user,
+      verificationLink
+    })
 
     response.status(200).json({
       message: `If the email ${maskedEmail} exists, a verification email was sent.`
