@@ -14,16 +14,22 @@ const errorHandler = (
     error = new HttpError(error.message || 'Internal server error', 500);
   }
 
-  const statusCode = (error as HttpError).statusCode || 500; // Default to 500 if no statusCode
-  const message = (error as HttpError).message || 'Internal server error'; // Default message
-  const details = (error as HttpError).details || null; // Error details if available
-  const meta = (error as HttpError).meta || null;
+  const httpError = error as HttpError;
 
-  response.status(statusCode).json({
-    message: message,
-    details: details,
-    meta: meta
-  });
+  const statusCode = httpError.statusCode || 500;
+  const message = httpError.message || 'Internal server error';
+  const details = httpError.details;
+  const meta = httpError.meta;
+
+  const errorResponse: Record<string, any> = { message };
+  if (details !== undefined && details !== null) {
+    errorResponse.details = details;
+  }
+
+  if (meta !== undefined && meta !== null) {
+    errorResponse.meta = meta;
+  }
+  response.status(statusCode).json(errorResponse);
 };
 
 export default errorHandler;
