@@ -24,3 +24,25 @@ export const validateBody = (schema: ZodSchema) => (
   req.body = result.data;
   next();
 };
+
+export const validateQuery = (schema: ZodSchema) => (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const result = schema.safeParse(req.query);
+
+  if (!result.success) {
+
+    const errors: { [key: string]: string[] } = {};
+
+    for (const issue of result.error.issues) {
+      const key = issue.path.length > 0 ? issue.path.join('.') : 'form';
+      if (!errors[key]) errors[key] = [];
+      errors[key].push(issue.message);
+    }
+
+    return next(new HttpError('Invalid query parameters!', 400, errors));
+  }
+  next();
+};

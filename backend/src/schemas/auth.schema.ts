@@ -56,3 +56,60 @@ export const requestPasswordResetOtpSchema = z.object({
 });
 
 export type RequestPasswordResetOtpBody = z.infer<typeof requestPasswordResetOtpSchema>;
+
+
+export const verifyResetOtpSchema = z.object({
+  otp: z
+    .string()
+    .length(6, { message: 'Incorrect OTP format' })
+    .regex(/^\d+$/, { message: 'Incorrect OTP format' }),
+
+  email: z
+    .string()
+    .email({ message: 'Invalid email address.' })
+    .transform((val) => val.trim().toLowerCase()),
+});
+
+export type RequestVerifyResetOtpBody = z.infer<typeof verifyResetOtpSchema>;
+
+
+export const resetPasswordSchema = z.object({
+  email: z
+    .string()
+    .email({ message: 'Invalid email address.' })
+    .transform((val) => val.trim().toLowerCase()),
+
+  newPassword: z
+    .string()
+    .min(5, 'Password must be between 5 and 12 characters long.')
+    .max(12, 'Password must be between 5 and 12 characters long.')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter.')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter.')
+    .regex(/[0-9]/, 'Password must contain at least one number.')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character (e.g. @, #, $).')
+    .refine(val => !/\s/.test(val), {
+      message: 'Password must not contain spaces.',
+    }),
+
+  resetToken: z
+    .string()
+    .uuid('Invalid reset token.'),
+});
+
+export type RequestResetPasswordBody = z.infer<typeof resetPasswordSchema>;
+
+export const verifyEmailQuerySchema = z.object({
+  token: z.string().min(1, 'Required'),
+});
+
+export type RequestVerifyEmailQueryParam = z.infer<typeof verifyEmailQuerySchema>;
+
+
+export const ResendVerifyEmailSchema = z.object({
+  email: z
+    .string()
+    .email({ message: 'Invalid email address.' })
+    .transform((val) => val.trim().toLowerCase()),
+});
+
+export type RequestVerifyEmailBody = z.infer<typeof ResendVerifyEmailSchema>;

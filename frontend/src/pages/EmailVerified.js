@@ -53,6 +53,14 @@ const Button = styled.button`
     background-color: #005fa3;
   }
 `;
+const Link = styled.a`
+  color: #007acc;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
 
 const Footer = styled.div`
   margin-top: 30px;
@@ -91,6 +99,8 @@ const EmailVerified = () => {
           <>
             <Title>Email Verified</Title>
             <Message>Your email has been successfully verified. You can now enjoy all features of the app.</Message>
+            <Link href='/'>Continue to the app</Link>
+
           </>
         ) : (
           <>

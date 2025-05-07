@@ -91,4 +91,24 @@ function decrypt(cipherText: string): string {
   return decrypted.toString('utf8');
 }
 
-export { encrypt, decrypt };
+/**
+ * Compares a plain text string to an encrypted AES string.
+ *
+ * @param {string} plainText - The plain text to compare.
+ * @param {string} encryptedText - The AES-encrypted string to compare with.
+ * @returns {boolean} Whether the decrypted encrypted text matches the plain text.
+ *
+ * @example
+ * const isMatch = compareEncrypted('hello', 'f3a1...:7b9c...');
+ * console.log(isMatch); // true or false
+ */
+function compare(plainText: string, encryptedText: string): boolean {
+  try {
+    const decrypted = decrypt(encryptedText);
+    return decrypted === plainText;
+  } catch (error) {
+    return false;
+  }
+}
+
+export { encrypt, decrypt, compare };

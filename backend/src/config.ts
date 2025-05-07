@@ -10,4 +10,5 @@ export const config = {
   jwtSecret: JWT_SECRET,
   jwtExpiresIn: '1h',
   backendDomain: process.env.BACKEND_DOMAIN!,
+  frontendDomain: process.env.FRONTEND_DOMAIN!,
 };

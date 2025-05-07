@@ -1,17 +1,19 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import HttpError from '../utils/HttpError';
+import type { SignOptions } from 'jsonwebtoken';
+export type TokenType = 'access' | 'emailVerification';
 
 export interface TokenPayloadData {
   userId: string;
+  type: TokenType;
 }
-
 export class TokenService {
-  static generateToken(payload: TokenPayloadData): string {
-    return jwt.sign(
-      payload,
-      config.jwtSecret,
-      { expiresIn: '1h' });
+  static generateToken(
+    payload: TokenPayloadData,
+    expiresIn: SignOptions['expiresIn'] = '1h'
+  ): string {
+    return jwt.sign(payload, config.jwtSecret, { expiresIn });
   }
 
   static verifyToken(token: string): TokenPayloadData {

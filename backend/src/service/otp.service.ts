@@ -1,10 +1,11 @@
-import bcrypt from 'bcryptjs';
-import { Types } from 'mongoose';
 import { UserDocument } from '../models/user';
-import redisClient from '../utils/redisClient';
 import { EmailService } from '../utils/email/emailService';
-import { config } from '../config'
-import { encrypt } from '../utils/encryption/aes.encryption';
+import { encrypt, compare } from '../utils/encryption/aes.encryption';
+import { OtpRedisService } from './redis.service';
+
+type VerifyOtpResult =
+  | { success: true }
+  | { success: false; attemptsLeft?: number };
 
 export class OtpService {
   static generateOtp(): string {
@@ -12,26 +13,36 @@ export class OtpService {
   }
 
   static async generateAndSendOtp(user: UserDocument): Promise<void> {
-    const email = user.email;
 
     const otp = this.generateOtp();
     const hashedOtp = encrypt(otp);
 
-    const redisKey = `passwordResetOTP:${email}`;
-    await redisClient.del(redisKey); // Invalidate previous OTP
-
-    const redisValue = JSON.stringify({
-      userId: (user._id as Types.ObjectId).toString(),
-      hashedOtp,
-      attemptsLeft: 3,
-    });
-
-    await redisClient.set(redisKey, redisValue, 'EX', 300); // 5 minutes TTL
+    await OtpRedisService.setOtp(user, hashedOtp);
 
     await EmailService.sendEmail('OTP', {
       user,
       otp,
     });
+  }
+
+  static async verifyOtp(email: string, otp: string): Promise<VerifyOtpResult> {
+    const data = await OtpRedisService.getOtpData(email);
+    if (!data) {
+      return { success: false }
+    }
+
+    const isMatch = compare(otp, data.hashedOtp);
+
+    if (!isMatch) {
+      const attemptsLeft = await OtpRedisService.decreaseAttempts(email);
+      if (attemptsLeft) {
+        return { success: false, attemptsLeft }
+      }
+      return { success: false };
+    }
+
+    await OtpRedisService.deleteOtp(email);
+    return { success: true };
   }
 
   static maskEmail(email: string): string {

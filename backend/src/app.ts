@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import { connectDB } from './mongodb';
 import authenticationRoutes from './routes/v1/authentication';
 import errorHandler from './middlewares/error';
-import redisClient from './utils/redisClient';
 import globalRateLimiter from './middlewares/globalRateLimiter';
 import dotenv from 'dotenv';
 
@@ -31,7 +30,7 @@ const startServer = async (): Promise<void> => {
 
   app.listen(8080, () => {
     console.log("Server running on port 8080");
-    redisClient.showAllKeysAndValues();
+    // redisClient.showAllKeysAndValues();
   });
 };
 
