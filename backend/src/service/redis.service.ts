@@ -7,6 +7,7 @@ export const OtpRedisService = {
   getKey: (email: string) => `auth:password-reset:otp:${email}`,
 
   async setOtp(user: UserDocument, hashedOtp: string): Promise<void> {
+
     const key = this.getKey(user.email);
 
     await redisClient.del(key);

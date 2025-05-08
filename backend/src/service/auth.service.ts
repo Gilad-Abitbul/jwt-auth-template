@@ -4,7 +4,7 @@ import { UserDocument } from "../models/user";
 import HttpError from "../utils/HttpError";
 import { CreateUserRequestBody } from "../schemas/auth.schema";
 import { TokenService, TokenPayloadData } from "./token.service";
-import { config } from "../config";
+import { env } from "../env";
 import { compare, hash } from "../utils/encryption/bcrypt.encryption";
 
 export class AuthService {
@@ -36,11 +36,11 @@ export class AuthService {
 
     const payload: TokenPayloadData = {
       userId,
-      type: 'emailVerification',
+      type: 'verification',
     };
 
     const token: string = TokenService.generateToken(payload);
-    const verificationLink: string = `${config.backendDomain}/api/v1/verify-email?token=${token}`;
+    const verificationLink: string = `${env.backendDomain}/api/v1/verify-email?token=${token}`;
 
     await EmailService.sendEmail('VERIFY', {
       user,
@@ -50,9 +50,9 @@ export class AuthService {
     return user._id.toString();
   }
 
-  static async loginUser(email: string, password: string): Promise<{ token: string }> {
+  static async loginUser(email: string, password: string): Promise<{ accessToken: string; refreshToken: string }> {
 
-    const user: UserDocument | null = await UserService.getUserByEmail(email);
+    const user = await UserService.getUserByEmail(email);
 
     if (!user) throw new HttpError('Email and password do not match', 401);
 
@@ -61,12 +61,19 @@ export class AuthService {
     if (!isMatch) throw new HttpError('Email and password do not match', 401);
     if (!user.verified) throw new HttpError('Email not verified', 403);
 
-    const payload: TokenPayloadData = {
+    const accessPayload: TokenPayloadData = {
       userId: user._id.toString(),
       type: 'access'
     };
-    const token = TokenService.generateToken(payload);
 
-    return { token };
+    const refreshPayload: TokenPayloadData = {
+      userId: user._id.toString(),
+      type: 'refresh'
+    };
+
+    const accessToken = TokenService.generateToken(accessPayload, '1h');
+    const refreshToken = TokenService.generateToken(refreshPayload, '30d');
+
+    return { accessToken, refreshToken };
   }
 }

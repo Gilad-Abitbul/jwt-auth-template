@@ -44,6 +44,10 @@ export const loginUserSchema = z.object({
     .regex(/[0-9]/, { message: 'Password must contain at least one number.' })
     .regex(/[^A-Za-z0-9]/, { message: 'Password must contain at least one special character (e.g. @, #, $).' })
     .refine(val => !val.includes(' '), 'Password must not contain spaces.'),
+
+  rememberMe: z
+    .boolean()
+    .default(false)
 });
 
 export type LoginUserRequestBody = z.infer<typeof loginUserSchema>;
@@ -112,4 +116,4 @@ export const ResendVerifyEmailSchema = z.object({
     .transform((val) => val.trim().toLowerCase()),
 });
 
-export type RequestVerifyEmailBody = z.infer<typeof ResendVerifyEmailSchema>;
+export type RequestResendVerifyEmailBody = z.infer<typeof ResendVerifyEmailSchema>;

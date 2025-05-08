@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, CookieOptions } from 'express';
 import User, { IUser, UserDocument } from '../models/user';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -15,7 +15,7 @@ import { UserService } from '../service/user.service';
 import { OtpService } from '../service/otp.service';
 import { ResetTokenService } from '../service/resetToken.service';
 import { TokenPayloadData, TokenService } from '../service/token.service';
-import { config } from '../config';
+import { env } from '../env';
 
 
 export const createUser = async (
@@ -42,16 +42,23 @@ export const loginUser = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const { email, password, rememberMe } = req.body;
+    const { accessToken, refreshToken } = await AuthService.loginUser(email, password);
 
-    const { email, password } = req.body;
-    const { token } = await AuthService.loginUser(email, password);
+    const cookieOptions: CookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {})
+    }
 
     res
+      .cookie('refreshToken', refreshToken, cookieOptions)
       .status(200)
       .json({
         message: 'Login successful!',
-        meta: { token }
-      });
+        meta: { accessToken }
+      })
 
   } catch (error) {
     next(error instanceof HttpError ? error : new HttpError('Error logging in user!', 500));
@@ -155,7 +162,7 @@ export const verifyEmail = async (
   try {
     const decoded = TokenService.verifyToken(token);
 
-    if (decoded.type !== 'emailVerification') {
+    if (decoded.type !== 'verification') {
       throw new HttpError('Invalid token type for this action', 403);
     }
 
@@ -167,18 +174,18 @@ export const verifyEmail = async (
     }
 
     if (user.verified) {
-      return res.redirect(`${config.frontendDomain}/email-verified?status=success`);
+      return res.redirect(`${env.frontendDomain}/email-verified?status=success`);
     }
 
     await UserService.setEmailVerified(user, true);
 
     logger.info(`Email verified for ${user.email}`);
 
-    return res.redirect(`${config.frontendDomain}/email-verified?status=success`);
+    return res.redirect(`${env.frontendDomain}/email-verified?status=success`);
 
   } catch (error) {
     logger.error(`Email verification failed: ${(error as Error).message}`);
-    return res.redirect(`${config.frontendDomain}/email-verified?status=invalid`);
+    return res.redirect(`${env.frontendDomain}/email-verified?status=invalid`);
   }
 };
 
@@ -201,11 +208,11 @@ export const resendVerificationEmail = async (
 
     const payload: TokenPayloadData = {
       userId: user._id.toString(),
-      type: 'emailVerification',
+      type: 'verification',
     }
 
     const token = TokenService.generateToken(payload)
-    const verificationLink = `${config.backendDomain}/api/v1/verify-email?token=${token}`;
+    const verificationLink = `${env.backendDomain}/api/v1/verify-email?token=${token}`;
 
     EmailService.sendEmail('VERIFY', {
       user,
@@ -218,5 +225,38 @@ export const resendVerificationEmail = async (
 
   } catch (error) {
     next(error instanceof HttpError ? error : new HttpError('Something went wrong. Please try again later.', 500));
+  }
+};
+
+export const refreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const token = req.cookies?.refreshToken;
+
+    if (!token) {
+      throw new HttpError('No refresh token provided.', 401);
+    }
+
+    const payload = TokenService.verifyToken(token);
+
+    if (payload.type !== 'refresh') {
+      throw new HttpError('Invalid token type.', 401);
+    }
+
+    const newAccessToken = TokenService.generateToken({
+      userId: payload.userId,
+      type: 'access'
+    }, '1h');
+
+    res.status(200).json({
+      message: 'Token refreshed!',
+      meta: { accessToken: newAccessToken }
+    });
+
+  } catch (error) {
+    next(error instanceof HttpError ? error : new HttpError('Error refreshing token.', 401));
   }
 };

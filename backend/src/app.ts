@@ -2,15 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import { connectDB } from './mongodb';
 import authenticationRoutes from './routes/v1/authentication';
 import errorHandler from './middlewares/error';
-import globalRateLimiter from './middlewares/globalRateLimiter';
-import dotenv from 'dotenv';
-
-// Load environment variables from the .env file
-dotenv.config();
 
 const app = express();
-
-app.use(globalRateLimiter);
 
 app.use(express.json());
 
@@ -28,9 +21,8 @@ app.use(errorHandler);
 const startServer = async (): Promise<void> => {
   await connectDB();
 
-  app.listen(8080, () => {
+  app.listen(8080, async () => {
     console.log("Server running on port 8080");
-    // redisClient.showAllKeysAndValues();
   });
 };
 

@@ -17,12 +17,16 @@
  */
 import * as crypto from 'crypto';
 import dotenv from 'dotenv';
+import { env } from '../../env';
 
 // Load environment variables from the .env file
 dotenv.config();
 
 const algorithm = 'aes-256-cbc';
-const key = Buffer.from(process.env.ENCRYPTION_KEY as string, 'hex');
+const key = Buffer.from(env.aesEncryptionKey as string, 'hex');
+if (key.length !== 32) {
+  throw new Error('AES encryption key must be 32 bytes (64 hex characters) long.');
+}
 
 /**
  * Encrypts a plain text string using AES-256-CBC encryption algorithm.
