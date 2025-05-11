@@ -3,12 +3,12 @@ import { UserDocument } from '../models/user';
 import logger from '../utils/logger';
 import HttpError from '../utils/HttpError';
 import { EmailService } from '../utils/email/emailService';
-import { AuthService } from '../service/auth.service';
+import { AuthService } from '../services/auth.service';
 import { CreateUserRequestBody, LoginUserRequestBody, RequestPasswordResetOtpBody, RequestResendVerifyEmailBody, RequestResetPasswordBody, RequestVerifyEmailQueryParam, RequestVerifyResetOtpBody } from '../schemas/auth.schema';
-import { UserService } from '../service/user.service';
-import { OtpService } from '../service/otp.service';
-import { ResetTokenService } from '../service/resetToken.service';
-import { TokenPayloadData, TokenService } from '../service/token.service';
+import { UserService } from '../services/user.service';
+import { OtpService } from '../services/otp.service';
+import { ResetTokenService } from '../services/resetToken.service';
+import { TokenPayloadData, TokenService } from '../services/token.service';
 import { env } from '../env';
 
 

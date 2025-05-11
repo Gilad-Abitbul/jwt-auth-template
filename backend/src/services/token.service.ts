@@ -56,10 +56,14 @@ export class TokenService {
       const decoded = jwt.verify(token, secret);
       if (typeof decoded === 'string') throw new HttpError('Invalid token payload', 400);
 
-      return decoded as TokenPayloadData;
+      const { userId, type } = decoded as Partial<TokenPayloadData>;
+      if (!userId || !type) throw new HttpError('Invalid token payload', 400);
+
+      return { userId, type };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) throw new HttpError('Token expired', 401);
       if (error instanceof jwt.JsonWebTokenError) throw new HttpError('Invalid token', 401);
+      if (error instanceof HttpError) throw error;
       throw new HttpError('Token verification failed', 500);
     }
   }

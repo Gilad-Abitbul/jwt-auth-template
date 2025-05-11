@@ -1,26 +1,8 @@
-/**
- * @file This file contains the MongoDB connection logic for the application.
- * It uses the Mongoose library to connect to a MongoDB database and handles 
- * the connection process with error handling.
- * 
- * The `connectDB` function establishes a connection to the MongoDB database 
- * using the connection URI stored in the environment variables. If the connection
- * is successful, it logs a success message to the console. In case of an error,
- * the error is logged and the process exits with a failure code.
- * 
- * The connection URI is retrieved from the `MONGODB_URI` environment variable,
- * which should be set in a `.env` file.
- * 
- * @module Database
- */
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { env } from './env';
 
-// Load environment variables from the .env file
-dotenv.config();
 
-// MongoDB URI retrieved from the environment variable
-const MONGODB_URI: string = process.env.MONGODB_URI as string;
+const MONGODB_URI: string = env.mongodbUri;
 
 /**
  * Establishes a connection to the MongoDB database using Mongoose.

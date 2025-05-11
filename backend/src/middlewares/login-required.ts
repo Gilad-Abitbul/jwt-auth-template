@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { TokenPayloadData, TokenService } from '../service/token.service';
+import { TokenPayloadData, TokenService } from '../services/token.service';
 import HttpError from '../utils/HttpError';
 
 const loginRequired = (request: Request, response: Response, next: NextFunction): void => {

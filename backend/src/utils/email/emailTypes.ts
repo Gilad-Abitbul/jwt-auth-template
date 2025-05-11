@@ -1,19 +1,19 @@
-import { IUser } from '../../models/user';
+import { UserDocument } from '../../models/user';
 
 export type EmailType = 'OTP' | 'VERIFY' | 'RESET_SUCCESS';
 
 export interface OtpEmailData {
-  user: IUser;
+  user: UserDocument;
   otp: string;
 }
 
 export interface VerifyEmailData {
-  user: IUser;
+  user: UserDocument;
   verificationLink: string;
 }
 
 export interface ResetSuccessEmailData {
-  user: IUser;
+  user: UserDocument;
 }
 
 export type EmailPayloadMap = {
