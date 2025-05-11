@@ -1,13 +1,7 @@
 import { Request, Response, NextFunction, CookieOptions } from 'express';
-import User, { IUser, UserDocument } from '../models/user';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+import { UserDocument } from '../models/user';
 import logger from '../utils/logger';
-import { encrypt, decrypt } from '../utils/encryption/aes.encryption';
 import HttpError from '../utils/HttpError';
-import { Types } from 'mongoose';
-import redisClient from '../utils/redisClient';
 import { EmailService } from '../utils/email/emailService';
 import { AuthService } from '../service/auth.service';
 import { CreateUserRequestBody, LoginUserRequestBody, RequestPasswordResetOtpBody, RequestResendVerifyEmailBody, RequestResetPasswordBody, RequestVerifyEmailQueryParam, RequestVerifyResetOtpBody } from '../schemas/auth.schema';
@@ -49,7 +43,8 @@ export const loginUser = async (
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict' as const,
-      ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {})
+      ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
+      path: '/api/v1/refresh',
     }
 
     res
@@ -162,7 +157,7 @@ export const verifyEmail = async (
   try {
     const decoded = TokenService.verifyToken(token);
 
-    if (decoded.type !== 'verification') {
+    if (decoded?.type !== 'verification') {
       throw new HttpError('Invalid token type for this action', 403);
     }
 
@@ -241,10 +236,11 @@ export const refreshToken = async (
     }
 
     const payload = TokenService.verifyToken(token);
+    if (payload.type !== 'refresh') throw new HttpError('Invalid token type.', 401);
 
-    if (payload.type !== 'refresh') {
-      throw new HttpError('Invalid token type.', 401);
-    }
+    const user = await UserService.getUserById(payload.userId);
+    if (!user) throw new HttpError('User no longer exists.', 401);
+
 
     const newAccessToken = TokenService.generateToken({
       userId: payload.userId,

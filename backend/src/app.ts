@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { connectDB } from './mongodb';
-import authenticationRoutes from './routes/v1/authentication';
+import authenticationRoutes from './routes/v1/auth.routes';
+import postsRoutes from './routes/v1/post.routes';
 import errorHandler from './middlewares/error';
 
 const app = express();
@@ -15,6 +16,7 @@ app.use((request: Request, response: Response, next: NextFunction) => {
 });
 
 app.use('/api/v1', authenticationRoutes);
+app.use('/api/v1', postsRoutes);
 
 app.use(errorHandler);
 

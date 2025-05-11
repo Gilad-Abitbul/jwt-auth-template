@@ -93,6 +93,7 @@ function LoginPage({ toggleTheme, isDarkMode }) {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [showReset, setShowReset] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   // const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [cooldown, setCooldown] = useState({
@@ -312,6 +313,15 @@ function LoginPage({ toggleTheme, isDarkMode }) {
            required
            />
            {fieldErrors.password?.map((msg, i) => <ValidationErrorsText key={i}>{msg}</ValidationErrorsText>)}
+           <label style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              style={{ marginRight: '8px' }}
+            />
+            Remember me
+          </label>
            <Button
                type="submit"
                disabled={isLoading}
