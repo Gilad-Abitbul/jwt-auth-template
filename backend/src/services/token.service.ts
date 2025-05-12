@@ -30,6 +30,7 @@ export class TokenService {
   ): string {
     const kid = kidMap[payload.type];
     const secret = secretsMap[kid];
+
     return jwt.sign(
       payload,
       secret,
