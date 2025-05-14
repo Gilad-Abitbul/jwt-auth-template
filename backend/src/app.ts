@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { connectDB } from './mongodb';
 import authenticationRoutes from './routes/v1/auth.routes';
 import postsRoutes from './routes/v1/post.routes';
-import errorHandler from './middlewares/error';
+import errorHandler from './middlewares/errorHandler';
 
 const app = express();
 
